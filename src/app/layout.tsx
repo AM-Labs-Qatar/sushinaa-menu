@@ -9,7 +9,6 @@ import { getMenu } from "@/cms/repository";
 import { publicMenu } from "@/cms/schema";
 import { MenuProvider } from "@/cms/context";
 import { isProductionDeployment } from "@/lib/deploy-env";
-import { InstallPrompt } from "@/components/site/InstallPrompt";
 import "./globals.css";
 
 // Read the published menu at request time; preview builds need no database connection.
@@ -154,7 +153,6 @@ export default async function RootLayout({ children }: { children: React.ReactNo
               dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c") }}
             />
             {children}
-            <InstallPrompt />
             <Analytics />
           </LocaleProvider>
         </MenuProvider>
