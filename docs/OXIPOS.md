@@ -49,7 +49,12 @@ Our `posSku` values are assigned automatically as `SU-{DISH_ID}` in uppercase (e
 
 OXiPOS is **kitchen relay for the non-pickup order website**. There is no payment flow on this API — payment is the branch card machine / counter.
 
-Do **not** treat CMS car-collection pickup orders as POS pending tickets. CMS Orders UI owns pickup; POS acceptance only sets `accepted_by_pos_at` on the in-restaurant feed and must not move CMS kitchen status for pickup.
+**Enforced in code** (`src/ordering/surface.ts`):
+
+1. Host gate — `GET`/`POST` `/api/pos/*` return `503 POS_UNAVAILABLE_ON_PICKUP` when the storefront is pickup (`order.*` or `STOREFRONT_MODE=pickup`).
+2. Row gate — only orders with `order_surface = 'restaurant'` enter the pending list. Checkout on the pickup storefront stamps `order_surface = 'pickup'`; those tickets stay on the **CMS** board (`CMS_KITCHEN`) and never export to POS.
+
+POS acceptance only sets `accepted_by_pos_at` on restaurant-surface rows and must not move CMS pickup kitchen status.
 
 ## Live database
 

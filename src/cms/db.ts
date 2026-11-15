@@ -4,7 +4,7 @@ import { dirname } from "node:path";
 import { AUDIT_SCHEMA } from "./audit";
 import type { DbClient } from "./sql";
 export type { DbClient, DbRow, SqlStatement } from "./sql";
-import { ARRIVED_SQL, COUPONS_SQL, EDIT_SQL, ORDER_NUMBER_SQL, ORDER_SCHEMA, OXIPOS_SQL, PAYMENT_EVENTS_SQL, PRINT_SQL, STAFF_SCHEMA } from "@/ordering/schema";
+import { ARRIVED_SQL, COUPONS_SQL, EDIT_SQL, ORDER_NUMBER_SQL, ORDER_SCHEMA, ORDER_SURFACE_SQL, OXIPOS_SQL, PAYMENT_EVENTS_SQL, PRINT_SQL, STAFF_SCHEMA } from "@/ordering/schema";
 
 import { orderDatabaseAllowed } from "@/ordering/guard";
 // Capture configuration once, but create no connection or files during route imports.
@@ -60,12 +60,12 @@ let ready: Promise<unknown> | undefined;
 async function ensureOrderColumns() {
   const info = await db.execute("PRAGMA table_info(orders)");
   const have = new Set(info.rows.map((row) => String(row.name)));
-  const alters = [...ORDER_NUMBER_SQL, ...PRINT_SQL, ...EDIT_SQL, ...ARRIVED_SQL, ...OXIPOS_SQL].filter((sql) => {
+  const alters = [...ORDER_NUMBER_SQL, ...PRINT_SQL, ...EDIT_SQL, ...ARRIVED_SQL, ...OXIPOS_SQL, ...ORDER_SURFACE_SQL].filter((sql) => {
     const column = /ADD COLUMN (\w+)/.exec(sql)?.[1];
     return column ? !have.has(column) : false;
   });
   if (alters.length) await db.batch(alters, "write");
-  const creates = [...ORDER_NUMBER_SQL, ...PRINT_SQL, ...EDIT_SQL, ...PAYMENT_EVENTS_SQL, ...ARRIVED_SQL, ...COUPONS_SQL, ...OXIPOS_SQL].filter((sql) => sql.startsWith("CREATE"));
+  const creates = [...ORDER_NUMBER_SQL, ...PRINT_SQL, ...EDIT_SQL, ...PAYMENT_EVENTS_SQL, ...ARRIVED_SQL, ...COUPONS_SQL, ...OXIPOS_SQL, ...ORDER_SURFACE_SQL].filter((sql) => sql.startsWith("CREATE"));
 
   if (creates.length) await db.batch(creates, "write");
   // XXYYABC repeats on the same day next month, so the guest number cannot stay unique forever.

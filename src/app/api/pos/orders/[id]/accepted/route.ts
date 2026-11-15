@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
 import { OrderingUnavailable } from "@/ordering/guard";
+import { posPullAllowed } from "@/ordering/surface";
 import { oxiposAuthorized } from "@/ordering/vendors/oxipos/auth";
 import { acceptOxiposOrder } from "@/ordering/vendors/oxipos/repository";
+import { storefrontFromRequest } from "@/storefront/resolve";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -10,11 +12,15 @@ type Props = { params: Promise<{ id: string }> };
 
 /**
  * OXiPOS confirms it imported an order. POST /api/pos/orders/{pos_export_id}/accepted/
+ * Same host gate as GET — refuse on the pickup storefront.
  */
 export async function POST(request: Request, { params }: Props) {
   try {
     if (!oxiposAuthorized(request)) {
       return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+    }
+    if (!posPullAllowed(storefrontFromRequest(request))) {
+      return NextResponse.json({ code: "POS_UNAVAILABLE_ON_PICKUP" }, { status: 503 });
     }
     const id = Number((await params).id);
     const result = await acceptOxiposOrder(id);

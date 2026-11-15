@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
-import { ARRIVED_SQL, COUPONS_SQL, EDIT_SQL, ORDER_NUMBER_SQL, ORDER_SCHEMA, OXIPOS_SQL, PRINT_SQL, STAFF_SCHEMA } from '../src/ordering/schema';
+import { ARRIVED_SQL, COUPONS_SQL, EDIT_SQL, ORDER_NUMBER_SQL, ORDER_SCHEMA, ORDER_SURFACE_SQL, OXIPOS_SQL, PRINT_SQL, STAFF_SCHEMA } from '../src/ordering/schema';
 
 import { LIVE_DATABASE_HOST } from '../src/lib/deploy-env';
 
@@ -53,6 +53,7 @@ test('order bootstrap and additive migration have identical SQL', () => {
   assert.deepEqual(statements('db/migrations/0008_customer_arrived.sql'), ARRIVED_SQL);
   assert.deepEqual(statements('db/migrations/0009_coupons.sql'), COUPONS_SQL);
   assert.deepEqual(statements('db/migrations/0010_oxipos.sql'), OXIPOS_SQL);
+  assert.deepEqual(statements('db/migrations/0011_order_surface.sql'), ORDER_SURFACE_SQL);
 });
 
 test('mock gateway cannot be enabled in production', () => {

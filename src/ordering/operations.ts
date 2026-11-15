@@ -2,7 +2,7 @@ import type { DbRow, SqlStatement } from '@/cms/sql';
 import { db } from '@/cms/db';
 import { initOrders } from './checkout/repository';
 import { branchClause, type BranchScope } from './scope';
-import { KITCHEN_VISIBLE } from './visibility';
+import { CMS_KITCHEN } from './visibility';
 import type { BranchId } from '@/branches/branches';
 import type { OperationsData, OperationsQuery } from './operations-contracts';
 import { activeStatuses, staffGroups, statusInSql } from './status';
@@ -20,7 +20,7 @@ const paid=`paid_at IS NOT NULL AND ${valid}`;
 export async function operations(scope:BranchScope,query:OperationsQuery,now=new Date()):Promise<OperationsData>{
   await initOrders();
   const selected=operationScope(scope,query.branch),branch=branchClause(selected),range=operationRange(query,now);
-  const live=`${KITCHEN_VISIBLE} AND ${branch.sql}`;
+  const live=`${CMS_KITCHEN} AND ${branch.sql}`;
   const where=`${live} AND created_at>=? AND created_at<?`;
   const args=[...branch.args,range.start,range.end];
   const bucket=range.hourly?"strftime('%H',datetime(created_at,'+3 hours'))":"strftime('%Y-%m-%d',datetime(created_at,'+3 hours'))";

@@ -15,6 +15,10 @@ import {
 } from '@/ordering/payment-attempt';
 import { releaseHeld } from '@/ordering/coupons/lifecycle';
 import { composeOrderNumber, ORDER_NUMBER_FLOOR, orderSequence, qatarDay } from '@/ordering/order-number';
+import {
+  ORDER_SURFACE_PICKUP,
+  type OrderSurface,
+} from '@/ordering/surface';
 export async function initOrders() {
   assertOrderDatabaseAllowed(databaseUrl);
   await initDb();
@@ -98,7 +102,15 @@ export async function customerOrder(id: string, session: string | null) {
   })).rows[0]?.n ?? 0);
   return { ...customerResult(row), details, failedPaymentCount };
 }
-export async function persistPendingOrder(session: string, key: string, requestHash: string, snapshot: OrderSnapshot, revision: number, method: PaymentMethod = 'mock') {
+export async function persistPendingOrder(
+  session: string,
+  key: string,
+  requestHash: string,
+  snapshot: OrderSnapshot,
+  revision: number,
+  method: PaymentMethod = 'mock',
+  surface: OrderSurface = ORDER_SURFACE_PICKUP,
+) {
   await initOrders();
   const acquire = async () => {
     for (let n = 0; ; n++) {
@@ -161,8 +173,8 @@ export async function persistPendingOrder(session: string, key: string, requestH
       }
     }
     await tx.batch([
-      { sql: 'INSERT INTO orders (id,session_hash,idempotency_key,request_hash,snapshot,branch_id,order_number,total_minor,currency,customer_name,customer_phone,car_plate,car_colour,car_model,instructions,created_at,updated_at,payment_method) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
-        args: [id, sessionHash, key, requestHash, JSON.stringify({ version: 2, menuRevision: revision, ...snapshot }), snapshot.branchId, orderNumber, snapshot.totalMinor, snapshot.currency, snapshot.customer.name, snapshot.customer.phone, snapshot.customer.plate, snapshot.customer.colour, snapshot.customer.car, snapshot.customer.instructions, now, now, method] },
+      { sql: 'INSERT INTO orders (id,session_hash,idempotency_key,request_hash,snapshot,branch_id,order_number,total_minor,currency,customer_name,customer_phone,car_plate,car_colour,car_model,instructions,created_at,updated_at,payment_method,order_surface) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
+        args: [id, sessionHash, key, requestHash, JSON.stringify({ version: 2, menuRevision: revision, ...snapshot }), snapshot.branchId, orderNumber, snapshot.totalMinor, snapshot.currency, snapshot.customer.name, snapshot.customer.phone, snapshot.customer.plate, snapshot.customer.colour, snapshot.customer.car, snapshot.customer.instructions, now, now, method, surface] },
       ...(method === 'pay_at_pickup'
         ? [{ sql: "INSERT INTO order_outbox (id,order_id,event,created_at) VALUES (?,?,'order.placed',?)", args: [randomUUID(), id, now] }]
         : [insertAwaitingAttemptStatement(randomUUID(), id, method === 'sadad' ? 'sadad' : 'mock', now)]),

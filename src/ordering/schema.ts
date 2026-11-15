@@ -98,6 +98,12 @@ export const OXIPOS_SQL = [
   `CREATE INDEX IF NOT EXISTS orders_pos_pending ON orders(branch_id, accepted_by_pos_at)`,
 ];
 
+/** Keep identical to db/migrations/0011_order_surface.sql. */
+export const ORDER_SURFACE_SQL = [
+  `ALTER TABLE orders ADD COLUMN order_surface TEXT NOT NULL DEFAULT 'pickup'`,
+  `CREATE INDEX IF NOT EXISTS orders_surface_branch ON orders(branch_id, order_surface)`,
+];
+
 /** Keep identical to db/migrations/0009_coupons.sql. */
 export const COUPONS_SQL = [
   `CREATE TABLE IF NOT EXISTS coupons (
