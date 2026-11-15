@@ -10,6 +10,21 @@ Sushinaa has two databases and two sites. Production is the live restaurant menu
 | Dev (public) | https://test-dev-abu-iqbal-projects.vercel.app | `dev`, deployed as that project's production | `test-dev` | Dev Turso database `sushinaa-cms-dev` |
 | Local | http://localhost:3005 | any branch | none | `file:./data/menu.db`, unless you point it at the dev database |
 
+## OXiPOS (online order pull)
+
+See [`docs/OXIPOS.md`](OXIPOS.md). Set `OXIPOS_API_KEY` and `OXIPOS_SHOP_IDS` on the ordering deployment only. Do not put the live key on production until cutover.
+
+## Storefronts (menu vs pickup)
+
+One deployment serves two customer storefronts from the same catalog:
+
+| Storefront | Typical URL | Channel | UI |
+| --- | --- | --- | --- |
+| View-only menu | `https://sushinaamenu.qa/{branch}` | `menu` | Browse only |
+| Pickup ordering | `https://order.sushinaamenu.qa/{branch}` | `pickup` | Cart → CMS orders |
+
+Host `order.*` selects **pickup**. Any other host selects **menu**. For local and for `test-dev` before the `order.` DNS record exists, set `STOREFRONT_MODE=pickup` (or `menu`) to override the host. Legacy aliases `order` / `browse` still work. Attach both apex and `order.` domains on the Vercel project that should take pickup; keep production apex as **menu** (do not set `STOREFRONT_MODE=pickup` on live `sushinaa-menu` until cutover).
+
 "Preview" is a Vercel word for a deployment that is not the production deployment of a project, such as a pull request. It is not the dev site. Do not treat a `sushinaa-menu` preview as a safe place to edit the menu. The dev site is `test-dev`.
 
 https://test-dev-abu-iqbal-projects.vercel.app follows the `dev` branch. A push to `dev` updates that site. It does not update production. `https://test-dev.vercel.app` is not ours. Other branches do not deploy the `test-dev` project.

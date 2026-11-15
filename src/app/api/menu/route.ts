@@ -5,7 +5,7 @@ export const dynamic = "force-dynamic";
 export async function GET() {
   const { menu, revision } = await getMenu();
   return NextResponse.json(
-    { revision, menu: publicMenu(menu) },
+    { revision, menu: publicMenu(menu, "menu") },
     { headers: { "Cache-Control": "no-store" } },
   );
 }

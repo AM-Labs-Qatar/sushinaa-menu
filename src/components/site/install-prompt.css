@@ -1,0 +1,55 @@
+.a2hs {
+  position: sticky;
+  bottom: 0;
+  z-index: 40;
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 14px 16px calc(14px + env(safe-area-inset-bottom, 0px));
+  background: #1c1815;
+  color: #f4efe8;
+  border-top: 1px solid #ffffff18;
+  box-shadow: 0 -8px 28px #0006;
+}
+
+.a2hs-copy {
+  min-width: 0;
+}
+
+.a2hs-copy strong {
+  display: block;
+  font-size: 15px;
+  letter-spacing: -0.2px;
+  margin-bottom: 4px;
+}
+
+.a2hs-copy p {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.45;
+  color: #d9d0c5;
+}
+
+.a2hs-dismiss {
+  flex: none;
+  margin-top: 2px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid #ffffff22;
+  background: transparent;
+  color: #f4efe8;
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.a2hs-dismiss:hover {
+  background: #ffffff12;
+}
+
+@media (display-mode: standalone) {
+  .a2hs {
+    display: none;
+  }
+}

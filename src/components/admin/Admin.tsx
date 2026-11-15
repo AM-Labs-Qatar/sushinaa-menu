@@ -151,8 +151,10 @@ export function Admin({ initial, role, branchId }: { initial: MenuSnapshot; role
           -1,
           ...menu.dishes.filter((d) => d.section === id).map((d) => d.order),
         ) + 1,
-      visible: true,
-      available: true,
+      channels: {
+        menu: { visible: true },
+        pickup: { visible: true, available: true },
+      },
     });
   }
   const sorted = (id: string) =>
@@ -184,9 +186,24 @@ export function Admin({ initial, role, branchId }: { initial: MenuSnapshot; role
           <div className="admin-heading">
             <div><h1>{section==='Menu'?text('Your menu','قائمتك'):section==='Orders'?text('Live orders','الطلبات المباشرة'):labels[section][ar?1:0]}</h1></div>
             {section === "Menu" && (
-              <button className="primary" onClick={() => newItem()}>
-                {text("Add item","إضافة صنف")}
-              </button>
+              <div className="admin-heading-actions">
+                <button
+                  type="button"
+                  className="ops-export"
+                  onClick={() => {
+                    const link = document.createElement("a");
+                    link.href = "/api/admin/menu/pos-sku-export";
+                    link.download = "sushinaa-pos-skus.csv";
+                    link.click();
+                  }}
+                >
+                  <OpsIcon name="export" size={15} />
+                  {text("Export POS SKUs", "تصدير رموز نقاط البيع")}
+                </button>
+                <button className="primary" onClick={() => newItem()}>
+                  {text("Add item", "إضافة صنف")}
+                </button>
+              </div>
             )}
             {section === "Categories" && (
               <button

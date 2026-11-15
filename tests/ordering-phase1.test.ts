@@ -42,7 +42,7 @@ const admin = { kind: 'all' as const };
 const downTown = { kind: 'branch' as const, branchId: 'down-town' as const };
 const menu = menuSchema.parse(JSON.parse(readFileSync('data/initial-menu.json', 'utf8')));
 const when = new Date('2026-10-23T15:00:00+03:00');
-const dish = menu.dishes.find((item) => item.visible && item.available && item.kind.type === 'simple')!;
+const dish = menu.dishes.find((item) => item.channels.pickup.visible && item.channels.pickup.available && item.kind.type === 'simple')!;
 const quoteInput = checkoutSchema.parse({
   branchId: 'down-town',
   customer: { name: 'Test customer', phone: '97455551234', brand: 'toyota', plate: 'Q123456', colour: 'silver', car: 'test car', instructions: 'gate note' },

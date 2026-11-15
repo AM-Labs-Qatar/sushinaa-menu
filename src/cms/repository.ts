@@ -64,7 +64,10 @@ export async function readMenu(): Promise<MenuSnapshot> {
     if (!response.ok) throw new Error('Published menu is temporarily unavailable.');
     const raw = await response.json() as { revision?: unknown; menu?: unknown };
     if (!Number.isInteger(raw.revision) || !raw.menu) throw new Error('Published menu response is invalid.');
-    return { revision: Number(raw.revision), menu: menuSchema.parse(raw.menu) };
+    return {
+      revision: Number(raw.revision),
+      menu: menuSchema.parse(normalizeStoredMenu(raw.menu)),
+    };
   }
   const result = await db.execute(
     "SELECT revision,content FROM menu WHERE id=1",
@@ -129,7 +132,7 @@ export async function saveMenu(
   return { menu, revision: revision + 1 };
 }
 export async function seedMenu(input: unknown) {
-  const menu = menuSchema.parse(input);
+  const menu = menuSchema.parse(normalizeStoredMenu(input));
   await initDb();
   return db.execute({
     sql: "INSERT OR IGNORE INTO menu (id,revision,content) VALUES (1,1,?)",

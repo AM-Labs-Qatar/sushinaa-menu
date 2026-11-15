@@ -5,6 +5,7 @@ import { MenuProvider } from '@/cms/context';
 import { publicMenu } from '@/cms/schema';
 import { OrderingExperience } from '@/components/checkout/OrderingExperience';
 import { orderingEnabled } from '@/ordering/config';
+import { currentStorefront } from '@/storefront/server';
 import { pageMeta } from '@/lib/page-meta';
 import '../../order/order.css';
 
@@ -31,7 +32,8 @@ export async function generateMetadata({ params }: Props) {
  */
 export default async function BranchOrderReturn({ params, searchParams }: Props) {
   const branch = findBranch((await params).branch);
-  if (!branch || !orderingEnabled(branch.slug)) notFound();
+  const storefront = await currentStorefront();
+  if (!branch || storefront.mode !== 'pickup' || !orderingEnabled(branch.slug)) notFound();
   const sp = await searchParams;
   const paidRaw = Array.isArray(sp.paid) ? sp.paid[0] : sp.paid;
   const returnPaidId = paidRaw && /^SU-[0-9a-f-]{36}$/.test(paidRaw) ? paidRaw : undefined;
@@ -39,7 +41,7 @@ export default async function BranchOrderReturn({ params, searchParams }: Props)
   const payFailed = payRaw === 'failed';
   const { menu } = await getMenu();
   return (
-    <MenuProvider menu={publicMenu(menu)}>
+    <MenuProvider menu={publicMenu(menu, "pickup")}>
       <OrderingExperience
         initialNow={new Date().toISOString()}
         branchId={branch.slug}

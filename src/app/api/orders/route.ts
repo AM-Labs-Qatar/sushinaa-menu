@@ -7,18 +7,22 @@ import { orderingEnabled } from '@/ordering/config';
 import { reply, failure, provider, writeAccess, jsonBody, OrderError } from '@/ordering/http';
 import { orderSession } from '@/ordering/session';
 import { rateAllowed } from '@/ordering/rate-limit';
+import { storefrontFromRequest } from '@/storefront/resolve';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
-export async function GET() {
+export async function GET(request: Request) {
   try {
     const paymentProvider = provider();
+    if (storefrontFromRequest(request).mode !== 'pickup') throw new OrderError('ORDERING_UNAVAILABLE', 503);
     await orderSession(true);
     return reply({ paymentProvider });
   } catch (error) { return failure(error); }
 }
 export async function POST(request: Request) {
   try {
-    const paymentProvider = provider(); writeAccess(request);
+    const paymentProvider = provider();
+    if (storefrontFromRequest(request).mode !== 'pickup') throw new OrderError('ORDERING_UNAVAILABLE', 503);
+    writeAccess(request);
     const key = request.headers.get('idempotency-key');
     if (!key || !/^[a-zA-Z0-9-]{16,80}$/.test(key)) throw new OrderError('INVALID', 400);
     const parsed = checkoutSchema.parse(await jsonBody(request));

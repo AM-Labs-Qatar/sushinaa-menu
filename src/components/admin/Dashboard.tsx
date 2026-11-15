@@ -3,6 +3,7 @@ import { useState } from 'react';
 import Image from 'next/image';
 import { useLocale } from '@/i18n/locale';
 import type { MenuData,CmsDish } from '@/cms/schema';
+import { dishPickupActive } from '@/cms/schema';
 import { configuredBranches } from '@/branches/branches';
 import { branchStatus,qatarClock } from '@/branches/hours';
 import { formatMinor } from '@/lib/money';
@@ -18,8 +19,8 @@ export function Dashboard({menu,onEdit,onMenu,onOrders,onBranches,branch,role}:{
   const num=(v:number)=>new Intl.NumberFormat(lang).format(v);const money=(v:number)=>formatMinor(v,lang);
   const mins=(v:number|null|undefined)=>v==null?'—':`${num(v)} ${text('min','د')}`;
   const counts=data?.counts;const metrics=data?.metrics;
-  const activeItems=menu.dishes.filter(d=>d.visible&&d.available&&menu.categories.some(c=>c.id===d.section&&c.visible));
-  const unavailable=menu.dishes.filter(d=>d.visible&&!d.available);
+  const activeItems=menu.dishes.filter(d=>dishPickupActive(d)&&menu.categories.some(c=>c.id===d.section&&c.visible));
+  const unavailable=menu.dishes.filter(d=>d.channels.pickup.visible&&!d.channels.pickup.available);
   const max=Math.max(1,...(data?.series??[]).map(p=>chart==='orders'?p.orders:p.salesMinor));
   const dateControls=<div className="ops-date-controls">
     <label className="sr-only" htmlFor="dashboard-period">{text('Reporting period','الفترة الزمنية')}</label>

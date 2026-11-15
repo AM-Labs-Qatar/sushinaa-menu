@@ -34,7 +34,7 @@ export function assertBranchOpen(menu: MenuData, branchId: string, now = new Dat
 function quoteMenu(input: CheckoutInput, menu: MenuData, now = new Date()) {
   const branch = assertBranchOpen(menu, input.branchId, now);
   if (input.lines.reduce((n, line) => n + line.quantity, 0) > 100) throw new CheckoutError('LIMIT');
-  const available = publicMenu(menu).dishes;
+  const available = publicMenu(menu, 'pickup').dishes;
   const lines = input.lines.map(line => {
     const dish = available.find(d => d.id === line.dishId);
     if (!dish) throw new CheckoutError('UNAVAILABLE');
@@ -44,7 +44,8 @@ function quoteMenu(input: CheckoutInput, menu: MenuData, now = new Date()) {
     const category = menu.categories.find((item) => item.id === dish.section);
     return { dishId: dish.id, name: dish.name, nameAr: dish.nameAr, kind: dish.kind, freeDips: dish.freeDips, extras: dish.extras,
       categoryId: dish.section, categoryName: category?.name ?? 'Items', categoryNameAr: category?.nameAr ?? '', categoryOrder: category?.order ?? 0,
-      selection: line.selection, quantity: line.quantity, note: line.note, unitMinor, totalMinor: unitMinor * line.quantity };
+      selection: line.selection, quantity: line.quantity, note: line.note, unitMinor, totalMinor: unitMinor * line.quantity,
+      ...(dish.posSku ? { posSku: dish.posSku } : {}) };
   });
   return { branchId: branch.slug, branchName: branch.name, customer: input.customer, collection: 'car' as const, lines,
     totalMinor: lines.reduce((n, line) => n + line.totalMinor, 0), currency: 'QAR' as const };

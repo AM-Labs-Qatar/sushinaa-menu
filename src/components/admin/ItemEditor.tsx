@@ -158,14 +158,48 @@ export function ItemEditor({
                   onChange={(descriptionAr) => patch({ descriptionAr })}
                 />
                 <Check
-                  label="Visible on the menu"
-                  value={draft.visible}
-                  onChange={(visible) => patch({ visible })}
+                  label="Show on menu site"
+                  value={draft.channels.menu.visible}
+                  onChange={(visible) =>
+                    patch({
+                      channels: {
+                        ...draft.channels,
+                        menu: { visible },
+                      },
+                    })
+                  }
                 />
                 <Check
-                  label="Available to order"
-                  value={draft.available}
-                  onChange={(available) => patch({ available })}
+                  label="Show on pickup"
+                  value={draft.channels.pickup.visible}
+                  onChange={(visible) =>
+                    patch({
+                      channels: {
+                        ...draft.channels,
+                        pickup: { ...draft.channels.pickup, visible },
+                      },
+                    })
+                  }
+                />
+                <Check
+                  label="Available to order (pickup)"
+                  value={draft.channels.pickup.available}
+                  onChange={(available) =>
+                    patch({
+                      channels: {
+                        ...draft.channels,
+                        pickup: { ...draft.channels.pickup, available },
+                      },
+                    })
+                  }
+                />
+                <TextField
+                  label="POS SKU"
+                  path="posSku"
+                  value={draft.posSku || ""}
+                  onChange={(posSku) =>
+                    patch({ posSku: posSku.trim() ? posSku.trim() : undefined })
+                  }
                 />
                 <fieldset className="admin-fieldset">
                   <legend>Dietary labels</legend>

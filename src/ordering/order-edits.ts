@@ -29,7 +29,7 @@ export async function storedEdits(orderId: string): Promise<ResolvedEdit[]> {
 
 async function priceLine(dishId: string, selection: WorkingLine['selection'], quantity: number, note: string, id: string): Promise<WorkingLine> {
   const { menu } = await readMenu();
-  const dish = publicMenu(menu).dishes.find((item) => item.id === dishId);
+  const dish = publicMenu(menu, 'pickup').dishes.find((item) => item.id === dishId);
   if (!dish || !validCheckoutSelection(dish, selection)) throw new OrderError('UNAVAILABLE', 409);
   const category = menu.categories.find((item) => item.id === dish.section);
   const unitMinor = Math.round(unitPrice(dish, selection) * 100);

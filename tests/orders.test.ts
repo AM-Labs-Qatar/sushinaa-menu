@@ -63,7 +63,7 @@ test('same key with a different body is rejected', async () => {
   await rejected(repository.persistPendingOrder(session,key,'changed',snapshot,1),'CONFLICT');
 });
 const menu = menuSchema.parse(JSON.parse(readFileSync('data/initial-menu.json','utf8')));
-const dish = menu.dishes.find(d=>d.visible && d.available && d.kind.type === 'simple')!;
+const dish = menu.dishes.find(d=>d.channels.pickup.visible && d.channels.pickup.available && d.kind.type === 'simple')!;
 const input = {branchId:'down-town',customer:snapshot.customer,lines:[{dishId:dish.id,selection:defaultSelection(dish),quantity:1,note:'',expectedUnitMinor:Math.round(unitPrice(dish,defaultSelection(dish))*100)}]};
 test('client-sent total or paid flag is ignored', async () => {
   // Strict validation refuses forged fields entirely; they can never affect persistence.

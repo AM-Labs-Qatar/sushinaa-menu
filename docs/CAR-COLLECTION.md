@@ -4,7 +4,7 @@ Work stays on feature branches; pull requests target `dev`. The product is **car
 
 ## Customer journey
 
-`/` is the dev branch picker; `/[branch]` retains the viewing menu. `/order` has an independent basket: choose a branch, browse, then see the original paper receipt, collection details, and review on separate screens. Confirmation keeps Google Maps directions above the receipt. English and Arabic layouts share the same flow.
+`/` is the branch picker. Host selects the storefront: apex (or non-`order.` hosts) is the **menu** surface; `order.{domain}/{branch}` is **pickup** ordering with basket, collection details, review, and confirmation. `/order` redirects into a branch. Payment return uses `/{branch}/order?paid=…` on the pickup host. English and Arabic layouts share the same flow. Locally or on `test-dev` without an `order.` subdomain, set `STOREFRONT_MODE=pickup`.
 
 The four branches, coordinates and hours share `src/branches/branches.ts` and `src/branches/hours.ts`. Phone entry uses +974 and eight national digits. Plates use Q/T/R plus 3–6 digits, preserving leading zeroes. New staff and collection-notice copy is translated into Arabic at the owner's request; final copy review remains parked.
 
