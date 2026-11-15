@@ -1,13 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState, useSyncExternalStore } from "react";
 import { useLocale } from "@/i18n/locale";
 import "./install-prompt.css";
 
 const DISMISS_KEY = "sushinaa-a2hs-dismissed";
 
 function isStandaloneDisplay(): boolean {
-  if (typeof window === "undefined") return false;
   const media = window.matchMedia("(display-mode: standalone)").matches;
   const iosStandalone =
     "standalone" in navigator &&
@@ -16,13 +15,20 @@ function isStandaloneDisplay(): boolean {
 }
 
 function isIosDevice(): boolean {
-  if (typeof navigator === "undefined") return false;
   const ua = navigator.userAgent;
   return (
     /iPad|iPhone|iPod/.test(ua) ||
     (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1)
   );
 }
+
+function readEligible(): boolean {
+  if (isStandaloneDisplay()) return false;
+  if (localStorage.getItem(DISMISS_KEY) === "1") return false;
+  return isIosDevice();
+}
+
+const emptySubscribe = () => () => {};
 
 /**
  * Guides iPhone/iPad users to Share → Add to Home Screen.
@@ -32,16 +38,9 @@ export function InstallPrompt() {
   const { lang } = useLocale();
   const ar = lang === "ar";
   const text = (en: string, arabic: string) => (ar ? arabic : en);
-  const [show, setShow] = useState(false);
-
-  useEffect(() => {
-    if (isStandaloneDisplay()) return;
-    if (localStorage.getItem(DISMISS_KEY) === "1") return;
-    if (!isIosDevice()) return;
-    setShow(true);
-  }, []);
-
-  if (!show) return null;
+  const eligible = useSyncExternalStore(emptySubscribe, readEligible, () => false);
+  const [dismissed, setDismissed] = useState(false);
+  if (!eligible || dismissed) return null;
 
   return (
     <aside className="a2hs" role="region" aria-label={text("Add to Home Screen", "إضافة إلى الشاشة الرئيسية")}>
@@ -59,7 +58,7 @@ export function InstallPrompt() {
         className="a2hs-dismiss"
         onClick={() => {
           localStorage.setItem(DISMISS_KEY, "1");
-          setShow(false);
+          setDismissed(true);
         }}
       >
         {text("Not now", "ليس الآن")}

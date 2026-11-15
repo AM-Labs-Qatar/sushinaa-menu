@@ -187,10 +187,19 @@ export function Admin({ initial, role, branchId }: { initial: MenuSnapshot; role
             <div><h1>{section==='Menu'?text('Your menu','قائمتك'):section==='Orders'?text('Live orders','الطلبات المباشرة'):labels[section][ar?1:0]}</h1></div>
             {section === "Menu" && (
               <div className="admin-heading-actions">
-                <a className="ops-export" href="/api/admin/menu/pos-sku-export">
+                <button
+                  type="button"
+                  className="ops-export"
+                  onClick={() => {
+                    const link = document.createElement("a");
+                    link.href = "/api/admin/menu/pos-sku-export";
+                    link.download = "sushinaa-pos-skus.csv";
+                    link.click();
+                  }}
+                >
                   <OpsIcon name="export" size={15} />
                   {text("Export POS SKUs", "تصدير رموز نقاط البيع")}
-                </a>
+                </button>
                 <button className="primary" onClick={() => newItem()}>
                   {text("Add item", "إضافة صنف")}
                 </button>
