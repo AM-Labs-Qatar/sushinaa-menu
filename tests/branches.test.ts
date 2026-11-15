@@ -32,7 +32,7 @@ test('closed days skip to the next opening but still honour the previous night s
   for(const day of hours)day.closed=true;assert.equal(branchStatus(hours,{day:1,minute:800}).label,'Closed');assert.equal(branchStatus(hours,{day:1,minute:800}).open,false);
 });
 test('checkout enforces published hours and snapshots the published branch name',async()=>{
-  const menu=menuSchema.parse(legacy());const dish=menu.dishes.find(d=>d.visible&&d.available&&d.kind.type==='simple')!;const selection=defaultSelection(dish);
+  const menu=menuSchema.parse(legacy());const dish=menu.dishes.find(d=>d.channels.pickup.visible&&d.channels.pickup.available&&d.kind.type==='simple')!;const selection=defaultSelection(dish);
   const input=checkoutSchema.parse({branchId:'down-town',customer:{name:'Test',phone:'55551234',brand:'toyota',plate:'Q123'},lines:[{dishId:dish.id,selection,quantity:1,expectedUnitMinor:Math.round(unitPrice(dish,selection)*100)}]});
   menu.branches[0].name='New branch name';menu.branches[0].hours[0]={open:900,close:1620};
   await assert.rejects(()=>quoteOrder(input,menu,new Date('2026-11-01T14:59:00+03:00')),/CLOSED/);

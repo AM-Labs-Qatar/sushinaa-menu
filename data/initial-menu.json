@@ -167,7 +167,8 @@
       "available": true,
       "imageAlt": "",
       "imageAltAr": "",
-      "optionsImage": "/dishes/sushinaa-burger.jpg"
+      "optionsImage": "/dishes/sushinaa-burger.jpg",
+      "posSku": "SU-SUSHINAA-BURGER"
     },
     {
       "id": "crispy-calamari",
@@ -203,7 +204,8 @@
       "available": true,
       "imageAlt": "",
       "imageAltAr": "",
-      "optionsImage": "/dishes/crispy-calamari.jpg"
+      "optionsImage": "/dishes/crispy-calamari.jpg",
+      "posSku": "SU-CRISPY-CALAMARI"
     },
     {
       "id": "gyoza-chicken",
@@ -268,7 +270,8 @@
       "available": true,
       "imageAlt": "",
       "imageAltAr": "",
-      "optionsImage": "/dishes/gyoza-chicken.jpg"
+      "optionsImage": "/dishes/gyoza-chicken.jpg",
+      "posSku": "SU-GYOZA-CHICKEN"
     },
     {
       "id": "gyoza-beef",
@@ -333,7 +336,8 @@
       "available": true,
       "imageAlt": "",
       "imageAltAr": "",
-      "optionsImage": "/dishes/gyoza-beef.jpg"
+      "optionsImage": "/dishes/gyoza-beef.jpg",
+      "posSku": "SU-GYOZA-BEEF"
     },
     {
       "id": "gyoza-shrimp",
@@ -400,7 +404,8 @@
       "available": true,
       "imageAlt": "",
       "imageAltAr": "",
-      "optionsImage": "/dishes/gyoza-shrimp.jpg"
+      "optionsImage": "/dishes/gyoza-shrimp.jpg",
+      "posSku": "SU-GYOZA-SHRIMP"
     },
     {
       "id": "gyoza-seafood",
@@ -467,7 +472,8 @@
       "available": true,
       "imageAlt": "",
       "imageAltAr": "",
-      "optionsImage": "/dishes/gyoza-seafood.jpg"
+      "optionsImage": "/dishes/gyoza-seafood.jpg",
+      "posSku": "SU-GYOZA-SEAFOOD"
     },
     {
       "id": "shrimp-kunafa",
@@ -489,7 +495,8 @@
       "available": true,
       "imageAlt": "",
       "imageAltAr": "",
-      "optionsImage": "/dishes/shrimp-kunafa.jpg"
+      "optionsImage": "/dishes/shrimp-kunafa.jpg",
+      "posSku": "SU-SHRIMP-KUNAFA"
     },
     {
       "id": "shrimp-tempura",
@@ -556,7 +563,8 @@
       "available": true,
       "imageAlt": "",
       "imageAltAr": "",
-      "optionsImage": "/dishes/shrimp-tempura.jpg"
+      "optionsImage": "/dishes/shrimp-tempura.jpg",
+      "posSku": "SU-SHRIMP-TEMPURA"
     },
     {
       "id": "shrimp",
@@ -599,7 +607,8 @@
       "available": true,
       "imageAlt": "",
       "imageAltAr": "",
-      "optionsImage": "/dishes/shrimp.jpg"
+      "optionsImage": "/dishes/shrimp.jpg",
+      "posSku": "SU-SHRIMP"
     },
     {
       "id": "chicken",
@@ -640,7 +649,8 @@
       "available": true,
       "imageAlt": "",
       "imageAltAr": "",
-      "optionsImage": "/dishes/chicken.jpg"
+      "optionsImage": "/dishes/chicken.jpg",
+      "posSku": "SU-CHICKEN"
     },
     {
       "id": "crispy-rice-crab",
@@ -663,7 +673,8 @@
       "available": true,
       "imageAlt": "",
       "imageAltAr": "",
-      "optionsImage": "/dishes/crispy-rice-crab.jpg"
+      "optionsImage": "/dishes/crispy-rice-crab.jpg",
+      "posSku": "SU-CRISPY-RICE-CRAB"
     },
     {
       "id": "crab-rangoon",
@@ -731,7 +742,8 @@
       "available": true,
       "imageAlt": "",
       "imageAltAr": "",
-      "optionsImage": "/dishes/crab-rangoon.jpg"
+      "optionsImage": "/dishes/crab-rangoon.jpg",
+      "posSku": "SU-CRAB-RANGOON"
     },
     {
       "id": "salt-edamame",
@@ -753,7 +765,8 @@
       "available": true,
       "imageAlt": "",
       "imageAltAr": "",
-      "optionsImage": "/dishes/salt-edamame.jpg"
+      "optionsImage": "/dishes/salt-edamame.jpg",
+      "posSku": "SU-SALT-EDAMAME"
     },
     {
       "id": "spicy-edamame",
@@ -776,7 +789,8 @@
       "available": true,
       "imageAlt": "",
       "imageAltAr": "",
-      "optionsImage": "/dishes/spicy-edamame.jpg"
+      "optionsImage": "/dishes/spicy-edamame.jpg",
+      "posSku": "SU-SPICY-EDAMAME"
     },
     {
       "id": "chicken-fried-rice",
@@ -796,7 +810,8 @@
       "available": true,
       "imageAlt": "",
       "imageAltAr": "",
-      "optionsImage": "/dishes/chicken-fried-rice.jpg"
+      "optionsImage": "/dishes/chicken-fried-rice.jpg",
+      "posSku": "SU-CHICKEN-FRIED-RICE"
     },
     {
       "id": "beef-fried-rice",
@@ -816,7 +831,8 @@
       "available": true,
       "imageAlt": "",
       "imageAltAr": "",
-      "optionsImage": "/dishes/beef-fried-rice.jpg"
+      "optionsImage": "/dishes/beef-fried-rice.jpg",
+      "posSku": "SU-BEEF-FRIED-RICE"
     },
     {
       "id": "shrimp-fried-rice",
@@ -838,7 +854,8 @@
       "available": true,
       "imageAlt": "",
       "imageAltAr": "",
-      "optionsImage": "/dishes/shrimp-fried-rice.jpg"
+      "optionsImage": "/dishes/shrimp-fried-rice.jpg",
+      "posSku": "SU-SHRIMP-FRIED-RICE"
     },
     {
       "id": "vegi-fried-rice",
@@ -860,7 +877,8 @@
       "available": true,
       "imageAlt": "",
       "imageAltAr": "",
-      "optionsImage": "/dishes/vegi-fried-rice.jpg"
+      "optionsImage": "/dishes/vegi-fried-rice.jpg",
+      "posSku": "SU-VEGI-FRIED-RICE"
     },
     {
       "id": "veggie-poke",
@@ -882,7 +900,8 @@
       "available": true,
       "imageAlt": "",
       "imageAltAr": "",
-      "optionsImage": "/dishes/vegi-poke-bowl.jpg"
+      "optionsImage": "/dishes/vegi-poke-bowl.jpg",
+      "posSku": "SU-VEGGIE-POKE"
     },
     {
       "id": "chicken-poke",
@@ -902,7 +921,8 @@
       "available": true,
       "imageAlt": "",
       "imageAltAr": "",
-      "optionsImage": "/dishes/chicken-poke-bowl.jpg"
+      "optionsImage": "/dishes/chicken-poke-bowl.jpg",
+      "posSku": "SU-CHICKEN-POKE"
     },
     {
       "id": "shrimp-poke",
@@ -924,7 +944,8 @@
       "available": true,
       "imageAlt": "",
       "imageAltAr": "",
-      "optionsImage": "/dishes/shrimp-poke-bowl.jpg"
+      "optionsImage": "/dishes/shrimp-poke-bowl.jpg",
+      "posSku": "SU-SHRIMP-POKE"
     },
     {
       "id": "shrimp-box",
@@ -993,7 +1014,8 @@
       "available": true,
       "imageAlt": "",
       "imageAltAr": "",
-      "optionsImage": "/dishes/shrimp-deal-box.jpg"
+      "optionsImage": "/dishes/shrimp-deal-box.jpg",
+      "posSku": "SU-SHRIMP-BOX"
     },
     {
       "id": "chicken-box",
@@ -1050,7 +1072,8 @@
       "available": true,
       "imageAlt": "",
       "imageAltAr": "",
-      "optionsImage": "/dishes/chicken-deal-box.jpg"
+      "optionsImage": "/dishes/chicken-deal-box.jpg",
+      "posSku": "SU-CHICKEN-BOX"
     },
     {
       "id": "seafood-box",
@@ -1107,7 +1130,8 @@
       "available": true,
       "imageAlt": "",
       "imageAltAr": "",
-      "optionsImage": "/dishes/seafood-deal-box.jpg"
+      "optionsImage": "/dishes/seafood-deal-box.jpg",
+      "posSku": "SU-SEAFOOD-BOX"
     },
     {
       "id": "veggie-box",
@@ -1168,7 +1192,8 @@
       "available": true,
       "imageAlt": "",
       "imageAltAr": "",
-      "optionsImage": "/dishes/vegi-deal-box.jpg"
+      "optionsImage": "/dishes/vegi-deal-box.jpg",
+      "posSku": "SU-VEGGIE-BOX"
     },
     {
       "id": "spicy-mango-salad",
@@ -1191,7 +1216,8 @@
       "available": true,
       "imageAlt": "",
       "imageAltAr": "",
-      "optionsImage": "/dishes/spicy-mango-salad.jpg"
+      "optionsImage": "/dishes/spicy-mango-salad.jpg",
+      "posSku": "SU-SPICY-MANGO-SALAD"
     },
     {
       "id": "crunchy-crab-salad",
@@ -1222,7 +1248,8 @@
       "available": true,
       "imageAlt": "",
       "imageAltAr": "",
-      "optionsImage": "/dishes/crunchy-crab-salad.jpg"
+      "optionsImage": "/dishes/crunchy-crab-salad.jpg",
+      "posSku": "SU-CRUNCHY-CRAB-SALAD"
     },
     {
       "id": "honey-glaze-chicken",
@@ -1262,7 +1289,8 @@
       "available": true,
       "imageAlt": "",
       "imageAltAr": "",
-      "optionsImage": "/dishes/glazed-honey-chicken.jpg"
+      "optionsImage": "/dishes/glazed-honey-chicken.jpg",
+      "posSku": "SU-HONEY-GLAZE-CHICKEN"
     },
     {
       "id": "honey-glaze-salmon",
@@ -1304,7 +1332,8 @@
       "available": true,
       "imageAlt": "",
       "imageAltAr": "",
-      "optionsImage": "/dishes/glazed-honey-salmon.jpg"
+      "optionsImage": "/dishes/glazed-honey-salmon.jpg",
+      "posSku": "SU-HONEY-GLAZE-SALMON"
     },
     {
       "id": "mario-roll",
@@ -1369,7 +1398,8 @@
       "available": true,
       "imageAlt": "",
       "imageAltAr": "",
-      "optionsImage": "/dishes/mario-roll-chicken.jpg"
+      "optionsImage": "/dishes/mario-roll-chicken.jpg",
+      "posSku": "SU-MARIO-ROLL"
     },
     {
       "id": "cereal-killer-roll",
@@ -1405,7 +1435,8 @@
       "available": true,
       "imageAlt": "",
       "imageAltAr": "",
-      "optionsImage": "/dishes/cereal-killer-roll.jpg"
+      "optionsImage": "/dishes/cereal-killer-roll.jpg",
+      "posSku": "SU-CEREAL-KILLER-ROLL"
     },
     {
       "id": "tiger-roll",
@@ -1464,7 +1495,8 @@
       "available": true,
       "imageAlt": "",
       "imageAltAr": "",
-      "optionsImage": "/dishes/tiger-roll-chicken.jpg"
+      "optionsImage": "/dishes/tiger-roll-chicken.jpg",
+      "posSku": "SU-TIGER-ROLL"
     },
     {
       "id": "chicken-mayo-roll",
@@ -1497,7 +1529,8 @@
       "available": true,
       "imageAlt": "",
       "imageAltAr": "",
-      "optionsImage": "/dishes/chicken-mayo-roll.jpg"
+      "optionsImage": "/dishes/chicken-mayo-roll.jpg",
+      "posSku": "SU-CHICKEN-MAYO-ROLL"
     },
     {
       "id": "philadelphia-roll",
@@ -1533,7 +1566,8 @@
       "available": true,
       "imageAlt": "",
       "imageAltAr": "",
-      "optionsImage": "/dishes/philadelphia-roll.jpg"
+      "optionsImage": "/dishes/philadelphia-roll.jpg",
+      "posSku": "SU-PHILADELPHIA-ROLL"
     },
     {
       "id": "fusion-roll",
@@ -1570,7 +1604,8 @@
       "available": true,
       "imageAlt": "",
       "imageAltAr": "",
-      "optionsImage": "/dishes/fusion-roll.jpg"
+      "optionsImage": "/dishes/fusion-roll.jpg",
+      "posSku": "SU-FUSION-ROLL"
     },
     {
       "id": "crazy-salmon-roll",
@@ -1608,7 +1643,8 @@
       "available": true,
       "imageAlt": "",
       "imageAltAr": "",
-      "optionsImage": "/dishes/crazy-salmon-roll.jpg"
+      "optionsImage": "/dishes/crazy-salmon-roll.jpg",
+      "posSku": "SU-CRAZY-SALMON-ROLL"
     },
     {
       "id": "volcanic-shrimp-roll",
@@ -1644,7 +1680,8 @@
       "available": true,
       "imageAlt": "",
       "imageAltAr": "",
-      "optionsImage": "/dishes/volcanic-shrimp-roll.jpg"
+      "optionsImage": "/dishes/volcanic-shrimp-roll.jpg",
+      "posSku": "SU-VOLCANIC-SHRIMP-ROLL"
     },
     {
       "id": "chips-oman-roll",
@@ -1680,7 +1717,8 @@
       "available": true,
       "imageAlt": "",
       "imageAltAr": "",
-      "optionsImage": "/dishes/chips-oman-roll.jpg"
+      "optionsImage": "/dishes/chips-oman-roll.jpg",
+      "posSku": "SU-CHIPS-OMAN-ROLL"
     },
     {
       "id": "salad-roll",
@@ -1716,7 +1754,8 @@
       "available": true,
       "imageAlt": "",
       "imageAltAr": "",
-      "optionsImage": "/dishes/salad-roll.jpg"
+      "optionsImage": "/dishes/salad-roll.jpg",
+      "posSku": "SU-SALAD-ROLL"
     },
     {
       "id": "shrimp-dynamite-roll",
@@ -1754,7 +1793,8 @@
       "available": true,
       "imageAlt": "",
       "imageAltAr": "",
-      "optionsImage": "/dishes/shrimp-dynamite-roll.jpg"
+      "optionsImage": "/dishes/shrimp-dynamite-roll.jpg",
+      "posSku": "SU-SHRIMP-DYNAMITE-ROLL"
     },
     {
       "id": "tempura-california-roll",
@@ -1812,7 +1852,8 @@
       "available": true,
       "imageAlt": "",
       "imageAltAr": "",
-      "optionsImage": "/dishes/tempura-california-roll.jpg"
+      "optionsImage": "/dishes/tempura-california-roll.jpg",
+      "posSku": "SU-TEMPURA-CALIFORNIA-ROLL"
     },
     {
       "id": "crab-california-roll",
@@ -1870,7 +1911,8 @@
       "available": true,
       "imageAlt": "",
       "imageAltAr": "",
-      "optionsImage": "/dishes/crab-california-roll.jpg"
+      "optionsImage": "/dishes/crab-california-roll.jpg",
+      "posSku": "SU-CRAB-CALIFORNIA-ROLL"
     },
     {
       "id": "shrimp-mayo-mixture",
@@ -1906,7 +1948,8 @@
       "available": true,
       "imageAlt": "",
       "imageAltAr": "",
-      "optionsImage": "/dishes/shrimp-mayo-mixture.jpg"
+      "optionsImage": "/dishes/shrimp-mayo-mixture.jpg",
+      "posSku": "SU-SHRIMP-MAYO-MIXTURE"
     },
     {
       "id": "hba-chicken-roll",
@@ -1942,7 +1985,8 @@
       "available": true,
       "imageAlt": "",
       "imageAltAr": "",
-      "optionsImage": "/dishes/hba-chicken-roll.jpg"
+      "optionsImage": "/dishes/hba-chicken-roll.jpg",
+      "posSku": "SU-HBA-CHICKEN-ROLL"
     },
     {
       "id": "crustacean-crispy-roll",
@@ -1978,7 +2022,8 @@
       "available": true,
       "imageAlt": "",
       "imageAltAr": "",
-      "optionsImage": "/dishes/crustacean-crispy-roll.jpg"
+      "optionsImage": "/dishes/crustacean-crispy-roll.jpg",
+      "posSku": "SU-CRUSTACEAN-CRISPY-ROLL"
     },
     {
       "id": "blue-roll",
@@ -2014,7 +2059,8 @@
       "available": true,
       "imageAlt": "",
       "imageAltAr": "",
-      "optionsImage": "/dishes/blue.jpg"
+      "optionsImage": "/dishes/blue.jpg",
+      "posSku": "SU-BLUE-ROLL"
     },
     {
       "id": "csc-roll",
@@ -2050,7 +2096,8 @@
       "available": true,
       "imageAlt": "",
       "imageAltAr": "",
-      "optionsImage": "/dishes/csc-roll.jpg"
+      "optionsImage": "/dishes/csc-roll.jpg",
+      "posSku": "SU-CSC-ROLL"
     },
     {
       "id": "flamin-hot-roll",
@@ -2104,7 +2151,8 @@
       "available": true,
       "imageAlt": "",
       "imageAltAr": "",
-      "optionsImage": "/dishes/flamin-roll-chicken.jpg"
+      "optionsImage": "/dishes/flamin-roll-chicken.jpg",
+      "posSku": "SU-FLAMIN-HOT-ROLL"
     },
     {
       "id": "lettuce-roll",
@@ -2156,7 +2204,8 @@
       "available": true,
       "imageAlt": "",
       "imageAltAr": "",
-      "optionsImage": "/dishes/lettuce-roll.jpg"
+      "optionsImage": "/dishes/lettuce-roll.jpg",
+      "posSku": "SU-LETTUCE-ROLL"
     },
     {
       "id": "october-roll",
@@ -2210,7 +2259,8 @@
       "available": true,
       "imageAlt": "",
       "imageAltAr": "",
-      "optionsImage": "/dishes/october-roll-chicken.jpg"
+      "optionsImage": "/dishes/october-roll-chicken.jpg",
+      "posSku": "SU-OCTOBER-ROLL"
     },
     {
       "id": "fire-crunch-roll",
@@ -2248,7 +2298,8 @@
       "available": true,
       "imageAlt": "",
       "imageAltAr": "",
-      "optionsImage": "/dishes/fire-crush-roll.jpg"
+      "optionsImage": "/dishes/fire-crush-roll.jpg",
+      "posSku": "SU-FIRE-CRUNCH-ROLL"
     },
     {
       "id": "classic-cherry-roll",
@@ -2298,7 +2349,8 @@
       "available": true,
       "imageAlt": "",
       "imageAltAr": "",
-      "optionsImage": "/dishes/classic-cherry-roll-chicken.jpg"
+      "optionsImage": "/dishes/classic-cherry-roll-chicken.jpg",
+      "posSku": "SU-CLASSIC-CHERRY-ROLL"
     },
     {
       "id": "crunchy-crab-roll",
@@ -2334,7 +2386,8 @@
       "available": true,
       "imageAlt": "",
       "imageAltAr": "",
-      "optionsImage": "/dishes/crunchy-crab-roll.jpg"
+      "optionsImage": "/dishes/crunchy-crab-roll.jpg",
+      "posSku": "SU-CRUNCHY-CRAB-ROLL"
     },
     {
       "id": "guac-roll",
@@ -2370,7 +2423,8 @@
       "available": true,
       "imageAlt": "",
       "imageAltAr": "",
-      "optionsImage": "/dishes/guac-roll.jpg"
+      "optionsImage": "/dishes/guac-roll.jpg",
+      "posSku": "SU-GUAC-ROLL"
     },
     {
       "id": "fried-shrimp-roll",
@@ -2407,7 +2461,8 @@
       "available": true,
       "imageAlt": "",
       "imageAltAr": "",
-      "optionsImage": "/dishes/fried-shrimp-roll.jpg"
+      "optionsImage": "/dishes/fried-shrimp-roll.jpg",
+      "posSku": "SU-FRIED-SHRIMP-ROLL"
     },
     {
       "id": "agr-burrito",
@@ -2454,7 +2509,8 @@
       "available": true,
       "imageAlt": "",
       "imageAltAr": "",
-      "optionsImage": "/dishes/agr-sushi-burrito.jpg"
+      "optionsImage": "/dishes/agr-sushi-burrito.jpg",
+      "posSku": "SU-AGR-BURRITO"
     },
     {
       "id": "tempura-roll",
@@ -2513,7 +2569,8 @@
       "available": true,
       "imageAlt": "",
       "imageAltAr": "",
-      "optionsImage": "/dishes/tempura-roll.jpg"
+      "optionsImage": "/dishes/tempura-roll.jpg",
+      "posSku": "SU-TEMPURA-ROLL"
     },
     {
       "id": "cheese-roll",
@@ -2567,7 +2624,8 @@
       "available": true,
       "imageAlt": "",
       "imageAltAr": "",
-      "optionsImage": "/dishes/cheese-maki.jpg"
+      "optionsImage": "/dishes/cheese-maki.jpg",
+      "posSku": "SU-CHEESE-ROLL"
     },
     {
       "id": "carrot-roll",
@@ -2626,7 +2684,8 @@
       "available": true,
       "imageAlt": "",
       "imageAltAr": "",
-      "optionsImage": "/dishes/carrot-maki.jpg"
+      "optionsImage": "/dishes/carrot-maki.jpg",
+      "posSku": "SU-CARROT-ROLL"
     },
     {
       "id": "avocado-roll",
@@ -2685,7 +2744,8 @@
       "available": true,
       "imageAlt": "",
       "imageAltAr": "",
-      "optionsImage": "/dishes/avocado-roll.jpg"
+      "optionsImage": "/dishes/avocado-roll.jpg",
+      "posSku": "SU-AVOCADO-ROLL"
     },
     {
       "id": "cucumber-roll",
@@ -2744,7 +2804,8 @@
       "available": true,
       "imageAlt": "",
       "imageAltAr": "",
-      "optionsImage": "/dishes/cucumber-maki.jpg"
+      "optionsImage": "/dishes/cucumber-maki.jpg",
+      "posSku": "SU-CUCUMBER-ROLL"
     },
     {
       "id": "crabsticks-roll",
@@ -2809,7 +2870,8 @@
       "available": true,
       "imageAlt": "",
       "imageAltAr": "",
-      "optionsImage": "/dishes/crabsticks-roll.jpg"
+      "optionsImage": "/dishes/crabsticks-roll.jpg",
+      "posSku": "SU-CRABSTICKS-ROLL"
     },
     {
       "id": "vegi-sushi",
@@ -2862,7 +2924,8 @@
       "available": true,
       "imageAlt": "",
       "imageAltAr": "",
-      "optionsImage": "/dishes/vegi-roll.jpg"
+      "optionsImage": "/dishes/vegi-roll.jpg",
+      "posSku": "SU-VEGI-SUSHI"
     },
     {
       "id": "chicken-noodles",
@@ -2927,7 +2990,8 @@
       "available": true,
       "imageAlt": "",
       "imageAltAr": "",
-      "optionsImage": "/dishes/chicken-noodles.jpg"
+      "optionsImage": "/dishes/chicken-noodles.jpg",
+      "posSku": "SU-CHICKEN-NOODLES"
     },
     {
       "id": "shrimp-noodles",
@@ -2994,7 +3058,8 @@
       "available": true,
       "imageAlt": "",
       "imageAltAr": "",
-      "optionsImage": "/dishes/shrimp-noodles.jpg"
+      "optionsImage": "/dishes/shrimp-noodles.jpg",
+      "posSku": "SU-SHRIMP-NOODLES"
     },
     {
       "id": "beef-noodles",
@@ -3059,7 +3124,8 @@
       "available": true,
       "imageAlt": "",
       "imageAltAr": "",
-      "optionsImage": "/dishes/beef-noodles.jpg"
+      "optionsImage": "/dishes/beef-noodles.jpg",
+      "posSku": "SU-BEEF-NOODLES"
     },
     {
       "id": "veggie-noodles",
@@ -3120,7 +3186,8 @@
       "available": true,
       "imageAlt": "",
       "imageAltAr": "",
-      "optionsImage": "/dishes/vegi-noodles.jpg"
+      "optionsImage": "/dishes/vegi-noodles.jpg",
+      "posSku": "SU-VEGGIE-NOODLES"
     },
     {
       "id": "sushinaa-box-mini",
@@ -3215,7 +3282,8 @@
       "available": true,
       "imageAlt": "",
       "imageAltAr": "",
-      "optionsImage": "/dishes/mini-sushinaa-box.jpg"
+      "optionsImage": "/dishes/mini-sushinaa-box.jpg",
+      "posSku": "SU-SUSHINAA-BOX-MINI"
     },
     {
       "id": "sushinaa-box-regular",
@@ -3310,7 +3378,8 @@
       "available": true,
       "imageAlt": "",
       "imageAltAr": "",
-      "optionsImage": "/dishes/sushinaa-box-regular.jpg"
+      "optionsImage": "/dishes/sushinaa-box-regular.jpg",
+      "posSku": "SU-SUSHINAA-BOX-REGULAR"
     },
     {
       "id": "sauces",
@@ -3393,7 +3462,8 @@
       "available": true,
       "imageAlt": "",
       "imageAltAr": "",
-      "optionsImage": "/dishes/extra-sauce.jpg"
+      "optionsImage": "/dishes/extra-sauce.jpg",
+      "posSku": "SU-SAUCES"
     },
     {
       "id": "redbull",
@@ -3413,7 +3483,8 @@
       "available": true,
       "imageAlt": "",
       "imageAltAr": "",
-      "optionsImage": "/dishes/redbull.jpg"
+      "optionsImage": "/dishes/redbull.jpg",
+      "posSku": "SU-REDBULL"
     },
     {
       "id": "water",
@@ -3446,7 +3517,8 @@
       "available": true,
       "imageAlt": "",
       "imageAltAr": "",
-      "optionsImage": "/dishes/still-water.jpg"
+      "optionsImage": "/dishes/still-water.jpg",
+      "posSku": "SU-WATER"
     },
     {
       "id": "kinza",
@@ -3521,7 +3593,8 @@
       "available": true,
       "imageAlt": "",
       "imageAltAr": "",
-      "optionsImage": "/dishes/kinza.jpg"
+      "optionsImage": "/dishes/kinza.jpg",
+      "posSku": "SU-KINZA"
     },
     {
       "id": "shani",
@@ -3541,7 +3614,8 @@
       "available": true,
       "imageAlt": "",
       "imageAltAr": "",
-      "optionsImage": "/dishes/shani.jpg"
+      "optionsImage": "/dishes/shani.jpg",
+      "posSku": "SU-SHANI"
     }
   ],
   "settings": {

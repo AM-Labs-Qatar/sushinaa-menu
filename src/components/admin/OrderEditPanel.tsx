@@ -28,7 +28,7 @@ export function OrderEditPanel({ id, data, role, menu, onSaved, onReprint }: {
   const text = (en: string, ar: string) => lang === 'ar' ? ar : en;
   const notify = useNotify();
   const reasons = reasonLabels(lang);
-  const dishes = publicMenu(menu).dishes;
+  const dishes = publicMenu(menu, 'pickup').dishes;
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [sheet, setSheet] = useState<SheetKind | null>(null);
   const [confirm, setConfirm] = useState<'void' | 'compliment' | null>(null);

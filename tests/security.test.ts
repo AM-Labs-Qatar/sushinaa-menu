@@ -4,7 +4,7 @@ import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { sniffImage } from "../src/cms/media";
-import { menuSchema, publicMenu } from "../src/cms/schema";
+import { menuSchema, normalizeStoredMenu, publicMenu } from "../src/cms/schema";
 
 test("uploads are recognised by their bytes", () => {
   assert.equal(sniffImage(readFileSync("public/dishes/sushinaa-burger.jpg")), "jpeg");
@@ -17,13 +17,16 @@ test("uploads are recognised by their bytes", () => {
 });
 
 test("the public menu carries nothing admin-only", () => {
-  const menu = menuSchema.parse(JSON.parse(readFileSync("data/initial-menu.json", "utf8")));
+  const menu = menuSchema.parse(
+    normalizeStoredMenu(JSON.parse(readFileSync("data/initial-menu.json", "utf8"))),
+  );
   menu.dishes[0].updatedAt = "2026-10-08T00:00:00.000Z";
-  menu.dishes[1].visible = false;
-  menu.dishes[2].available = false;
+  menu.dishes[1].channels.menu.visible = false;
+  menu.dishes[1].channels.pickup.visible = false;
+  menu.dishes[2].channels.pickup.available = false;
   const hiddenCategory = menu.categories[3];
   hiddenCategory.visible = false;
-  const shown = publicMenu(menu);
+  const shown = publicMenu(menu, "pickup");
   const json = JSON.stringify(shown);
   assert.ok(!json.includes("updatedAt"));
   assert.ok(!shown.dishes.some((d) => d.id === menu.dishes[1].id || d.id === menu.dishes[2].id));

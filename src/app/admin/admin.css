@@ -155,6 +155,12 @@
   margin: auto;
   padding: 36px;
 }
+.admin-heading-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
 .admin-heading {
   display: flex;
   justify-content: space-between;

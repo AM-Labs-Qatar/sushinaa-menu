@@ -76,8 +76,21 @@ function entityChanges<T extends { id: string; name?: string }>(
     const diff = fieldDiff(prev, e, ignore);
     const keys = Object.keys(diff);
     if (!keys.length) continue;
-    const action = keys.length === 1 && keys[0] === "visible" ? (e as { visible?: boolean }).visible ? "show" : "hide"
-      : keys.length === 1 && keys[0] === "order" ? "reorder" : "update";
+    let action = "update";
+    if (keys.length === 1 && keys[0] === "visible") {
+      action = (e as { visible?: boolean }).visible ? "show" : "hide";
+    } else if (keys.length === 1 && keys[0] === "order") {
+      action = "reorder";
+    } else if (keys.length === 1 && keys[0] === "channels") {
+      const change = diff.channels as {
+        from?: { menu?: { visible?: boolean }; pickup?: { visible?: boolean } };
+        to?: { menu?: { visible?: boolean }; pickup?: { visible?: boolean } };
+      };
+      const shown = (ch?: { menu?: { visible?: boolean }; pickup?: { visible?: boolean } }) =>
+        Boolean(ch?.menu?.visible || ch?.pickup?.visible);
+      if (shown(change.from) !== shown(change.to))
+        action = shown(change.to) ? "show" : "hide";
+    }
     out.push({ action: `${type}.${action}`, entityType: type, entityId: e.id, label, diff });
   }
   for (const e of before)

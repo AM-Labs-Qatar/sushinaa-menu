@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
-import { ARRIVED_SQL, COUPONS_SQL, EDIT_SQL, ORDER_NUMBER_SQL, ORDER_SCHEMA, PRINT_SQL, STAFF_SCHEMA } from '../src/ordering/schema';
+import { ARRIVED_SQL, COUPONS_SQL, EDIT_SQL, ORDER_NUMBER_SQL, ORDER_SCHEMA, OXIPOS_SQL, PRINT_SQL, STAFF_SCHEMA } from '../src/ordering/schema';
 
 import { LIVE_DATABASE_HOST } from '../src/lib/deploy-env';
 
@@ -30,7 +30,11 @@ test('ordering refuses to run or create tables on the live database host', () =>
     const repository = (await import('./src/ordering/checkout/repository.ts')).default;
     await assert.rejects(repository.initOrders(), /ORDERING_UNAVAILABLE/);
     const route = (await import('./src/app/api/orders/route.ts')).default;
-    for (const response of [await route.GET(), await route.POST(new Request('http://localhost/api/orders', {method:'POST'}))]) {
+    const orderUrl = 'http://order.localhost/api/orders';
+    for (const response of [
+      await route.GET(new Request(orderUrl)),
+      await route.POST(new Request(orderUrl, { method: 'POST' })),
+    ]) {
       assert.equal(response.status, 503);
       assert.deepEqual(await response.json(), {code:'ORDERING_UNAVAILABLE'});
     }
@@ -48,6 +52,7 @@ test('order bootstrap and additive migration have identical SQL', () => {
   assert.equal(readFileSync('db/migrations/0006_order_edits.sql', 'utf8').trim(), `${EDIT_SQL.join(';\n')};`);
   assert.deepEqual(statements('db/migrations/0008_customer_arrived.sql'), ARRIVED_SQL);
   assert.deepEqual(statements('db/migrations/0009_coupons.sql'), COUPONS_SQL);
+  assert.deepEqual(statements('db/migrations/0010_oxipos.sql'), OXIPOS_SQL);
 });
 
 test('mock gateway cannot be enabled in production', () => {

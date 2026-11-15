@@ -166,22 +166,29 @@ test("authenticated CMS CRUD, persistence, uploads and public integration", asyn
     await expect(page.getByRole("dialog")).toContainText("19.50");
     await expect(page.getByRole("dialog")).toContainText("Extra");
     const current = snapshot.menu.dishes.find((d) => d.id === dish.id)!;
-    current.visible = false;
+    current.channels = {
+      menu: { visible: false },
+      pickup: { ...current.channels.pickup, visible: false },
+    };
     await publish();
     expect(
       (await (await request.get("/api/menu")).json()).menu.dishes.some(
         (d: { id: string }) => d.id === dish.id,
       ),
     ).toBe(false);
-    snapshot.menu.dishes.find((d) => d.id === dish.id)!.visible = true;
-    snapshot.menu.dishes.find((d) => d.id === dish.id)!.available = false;
+    const restored = snapshot.menu.dishes.find((d) => d.id === dish.id)!;
+    restored.channels = {
+      menu: { visible: true },
+      pickup: { visible: true, available: false },
+    };
     await publish();
+    // Menu channel still shows unavailable-for-pickup dishes.
     expect(
       (await (await request.get("/api/menu")).json()).menu.dishes.some(
         (d: { id: string }) => d.id === dish.id,
       ),
-    ).toBe(false);
-    snapshot.menu.dishes.find((d) => d.id === dish.id)!.available = true;
+    ).toBe(true);
+    restored.channels.pickup.available = true;
     snapshot.menu.categories.find((c) => c.id === cat.id)!.visible = false;
     await publish();
     expect(
@@ -349,7 +356,7 @@ test("admin controls edit, reorder and delete content and options", async ({
       .poll(
         async () =>
           (await saved()).menu.dishes.find((d) => d.id === "sushinaa-burger")
-            ?.visible,
+            ?.channels.menu.visible,
       )
       .toBe(false);
     await burger.getByRole("button", { name: "Show", exact: true }).click();
@@ -357,7 +364,7 @@ test("admin controls edit, reorder and delete content and options", async ({
       .poll(
         async () =>
           (await saved()).menu.dishes.find((d) => d.id === "sushinaa-burger")
-            ?.visible,
+            ?.channels.menu.visible,
       )
       .toBe(true);
     await page.getByRole("button", { name: "Settings", exact: true }).click();
@@ -862,7 +869,13 @@ test("every admin write leaves an activity row and failed writes leave none", as
   // Accepted writes.
   const next = structuredClone(snapshot);
   next.menu.dishes[0].description = "Audited change";
-  next.menu.dishes[1].visible = false;
+  next.menu.dishes[1].channels = {
+    menu: { visible: false },
+    pickup: {
+      visible: false,
+      available: next.menu.dishes[1].channels.pickup.available,
+    },
+  };
   next.menu.settings.tagline = "Audited tagline";
   const saved = await api.put("/api/admin/menu", { headers, data: next });
   expect(saved.status()).toBe(200);

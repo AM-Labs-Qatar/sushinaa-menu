@@ -9,8 +9,8 @@ import { branchStatus, qatarClock } from '../src/branches/hours';
 import { CheckoutError, checkoutSchema, customerSchema, validCheckoutSelection, type CheckoutInput } from '../src/ordering/checkout/validation';
 import { quoteOrder } from '../src/ordering/checkout/quote';
 import { defaultSelection, serializeSelection, parseSelection, isSelectionComplete, unitPrice } from '../src/ordering/price';
-import { menuSchema, publicMenu } from '../src/cms/schema';
-const menu = menuSchema.parse(JSON.parse(readFileSync('data/initial-menu.json', 'utf8')));
+import { menuSchema, normalizeStoredMenu, publicMenu } from '../src/cms/schema';
+const menu = menuSchema.parse(normalizeStoredMenu(JSON.parse(readFileSync('data/initial-menu.json', 'utf8'))));
 const at = (date: string) => new Date(`${date}+03:00`);
 const open = (id: string, date: string) => branchStatus(branches.find(b => b.slug === id)!.hours, qatarClock(at(date))).open;
 test('Qatar branch boundaries include opening and exclude closing, including Thursday into Friday', () => {
@@ -59,7 +59,7 @@ test('normalises Arabic and Persian digits and requires a Q, T or R plate with 3
   assert.equal(customerSchema.safeParse({ ...customer, plate: '123-45' }).success, false);
   assert.equal(customerSchema.safeParse({ ...customer, plate: 'A123' }).success, false);
 });
-const roll = publicMenu(menu).dishes.find(d => d.kind.type === 'roll' && d.kind.proteins.some(p => p.prices[4] && p.prices[8]))!;
+const roll = publicMenu(menu, 'pickup').dishes.find(d => d.kind.type === 'roll' && d.kind.proteins.some(p => p.prices[4] && p.prices[8]))!;
 assert.equal(roll.kind.type, 'roll');
 const protein = roll.kind.proteins.find(p => p.prices[4] && p.prices[8])!;
 const selection = { ...defaultSelection(roll), protein: protein.id };
@@ -75,7 +75,7 @@ test('distinct servings retain notes, portions and server-calculated integer tot
 });
 test('rejects changed prices, hidden dishes, invalid choices, duplicate extras and closed branches', async () => {
   await assert.rejects(() => quoteOrder({ ...input, lines: [{ ...input.lines[0], expectedUnitMinor: 1 }] }, menu, at('2026-10-22T15:00:00')), /PRICE_CHANGED/);
-  const hidden = structuredClone(menu); hidden.dishes.find(d => d.id === roll.id)!.available = false;
+  const hidden = structuredClone(menu); hidden.dishes.find(d => d.id === roll.id)!.channels.pickup.available = false;
   await assert.rejects(() => quoteOrder(input, hidden, at('2026-10-22T15:00:00')), /UNAVAILABLE/);
   await assert.rejects(
     () => quoteOrder(input, menu, at('2026-10-23T03:00:00')),
@@ -94,7 +94,7 @@ test('collection details strip a legacy email key — pickup UI does not collect
 });
 
 test('all complete menu selections remain valid after the real basket serialization round trip', async () => {
-  for (const dish of publicMenu(menu).dishes) {
+  for (const dish of publicMenu(menu, 'pickup').dishes) {
     const selection = parseSelection(serializeSelection(defaultSelection(dish)));
     if (!isSelectionComplete(dish, selection)) continue; // Boxes intentionally need customer choices.
     assert.equal(validCheckoutSelection(dish, selection), true, dish.id);
@@ -104,7 +104,7 @@ test('all complete menu selections remain valid after the real basket serializat
 });
 
 test('sale price lowers the quoted unit; base alone is display-only', async () => {
-  const dish = publicMenu(menu).dishes.find((d) => d.kind.type === 'simple')!;
+  const dish = publicMenu(menu, 'pickup').dishes.find((d) => d.kind.type === 'simple')!;
   assert.equal(dish.kind.type, 'simple');
   const selection = defaultSelection(dish);
   const baseMinor = Math.round(unitPrice(dish, selection) * 100);

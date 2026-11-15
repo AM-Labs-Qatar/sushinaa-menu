@@ -9,6 +9,7 @@ import { getMenu } from "@/cms/repository";
 import { publicMenu } from "@/cms/schema";
 import { MenuProvider } from "@/cms/context";
 import { isProductionDeployment } from "@/lib/deploy-env";
+import { InstallPrompt } from "@/components/site/InstallPrompt";
 import "./globals.css";
 
 // Read the published menu at request time; preview builds need no database connection.
@@ -70,8 +71,10 @@ export async function generateMetadata(): Promise<Metadata> {
       icon: [
         { url: "/favicon.svg", type: "image/svg+xml" },
         { url: "/favicon-32.png", sizes: "32x32", type: "image/png" },
+        { url: "/icon-192.png", sizes: "192x192", type: "image/png" },
+        { url: "/icon-512.png", sizes: "512x512", type: "image/png" },
       ],
-      apple: "/apple-touch-icon.png",
+      apple: [{ url: "/apple-touch-icon.png", sizes: "180x180", type: "image/png" }],
     },
     openGraph: {
       type: "website",
@@ -93,10 +96,11 @@ export async function generateMetadata(): Promise<Metadata> {
     robots: isProductionDeployment()
       ? { index: true, follow: true }
       : { index: false, follow: false },
+    // Standalone install comes from the web app manifest (display: standalone).
+    // Prefer that over the legacy apple-mobile-web-app-capable meta tag.
     appleWebApp: {
-      capable: true,
-      statusBarStyle: "black-translucent",
       title: brand,
+      statusBarStyle: "black-translucent",
     },
     alternates: { canonical: SITE.url },
   };
@@ -142,7 +146,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     >
       <body className="min-h-full antialiased">
         {/* Dishes ship only with the menu page (src/app/page.tsx). */}
-        <MenuProvider menu={{ ...publicMenu(menu), dishes: [] }}>
+        <MenuProvider menu={{ ...publicMenu(menu, "menu"), dishes: [] }}>
           <LocaleProvider initial={lang}>
             <SkipLink />
             <script
@@ -150,6 +154,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
               dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c") }}
             />
             {children}
+            <InstallPrompt />
             <Analytics />
           </LocaleProvider>
         </MenuProvider>
