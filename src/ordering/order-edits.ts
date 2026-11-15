@@ -15,7 +15,7 @@ import {
   applyEdits, cancelReasonFor, discountFrom, editableStatuses, linesFromSnapshot, parseEditBody,
   type EditBody, type ResolvedEdit, type WorkingLine,
 } from './edits';
-import { KITCHEN_VISIBLE } from './visibility';
+import { CMS_KITCHEN } from './visibility';
 
 const editableSql = statusInSql(editableStatuses);
 
@@ -65,7 +65,7 @@ export async function applyOrderEdit(scope: BranchScope, id: string, raw: unknow
   if (body.kind === 'compliment' && role !== 'admin') throw new OrderError('FORBIDDEN', 403);
   const branch = branchClause(scope);
   const row = (await db.execute({
-    sql: `SELECT snapshot, total_minor, status, paid_at FROM orders WHERE id=? AND ${branch.sql} AND ${KITCHEN_VISIBLE}`,
+    sql: `SELECT snapshot, total_minor, status, paid_at FROM orders WHERE id=? AND ${branch.sql} AND ${CMS_KITCHEN}`,
     args: [id, ...branch.args],
   })).rows[0];
   if (!row) throw new OrderError('NOT_FOUND', 404);
@@ -96,7 +96,7 @@ export async function applyOrderEdit(scope: BranchScope, id: string, raw: unknow
   const result = await db.batch([
     {
       sql: `UPDATE orders SET total_minor=?, amended_at=?, updated_at=?
-        WHERE id=? AND ${branch.sql} AND ${editableSql} AND ${KITCHEN_VISIBLE}
+        WHERE id=? AND ${branch.sql} AND ${editableSql} AND ${CMS_KITCHEN}
         AND total_minor=? AND (paid_at IS NULL OR ?<=total_minor)`,
       args: [after, at, at, id, ...branch.args, before, after],
     },

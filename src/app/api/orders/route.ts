@@ -8,6 +8,7 @@ import { reply, failure, provider, writeAccess, jsonBody, OrderError } from '@/o
 import { orderSession } from '@/ordering/session';
 import { rateAllowed } from '@/ordering/rate-limit';
 import { storefrontFromRequest } from '@/storefront/resolve';
+import { orderSurfaceFromStorefront } from '@/ordering/surface';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 export async function GET(request: Request) {
@@ -21,7 +22,8 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const paymentProvider = provider();
-    if (storefrontFromRequest(request).mode !== 'pickup') throw new OrderError('ORDERING_UNAVAILABLE', 503);
+    const storefront = storefrontFromRequest(request);
+    if (storefront.mode !== 'pickup') throw new OrderError('ORDERING_UNAVAILABLE', 503);
     writeAccess(request);
     const key = request.headers.get('idempotency-key');
     if (!key || !/^[a-zA-Z0-9-]{16,80}$/.test(key)) throw new OrderError('INVALID', 400);
@@ -40,7 +42,8 @@ export async function POST(request: Request) {
     if (previous) return reply({ ...await customerOrder(previous.id, session), reused: true });
     const { menu, revision } = await readMenu();
     const snapshot = await quoteOrder(parsed, menu, new Date());
-    const order = await persistPendingOrder(session, key, requestHash, snapshot, revision, method);
+    const surface = orderSurfaceFromStorefront(storefront.mode);
+    const order = await persistPendingOrder(session, key, requestHash, snapshot, revision, method, surface);
     return reply({ ...await customerOrder(order.id, session), reused: order.reused }, order.reused ? 200 : 201);
   } catch (error) { return failure(error); }
 }

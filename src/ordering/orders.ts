@@ -15,10 +15,10 @@ import { counterSettlementStatements, mockProvider, settlePayment } from './paym
 import { releaseCouponStatement } from './coupons/repository';
 import { AUTO_PRINT_WINDOW_MS } from './config';
 import { afterChange } from './write';
-import { KITCHEN_VISIBLE } from './visibility';
+import { CMS_KITCHEN } from './visibility';
 import { isProductionDeployment } from '@/lib/deploy-env';
 
-export { KITCHEN_VISIBLE } from './visibility';
+export { CMS_KITCHEN } from './visibility';
 const text = (v: unknown) => typeof v === 'string' ? v : '';
 const nullable = (v: unknown) => typeof v === 'string' ? v : null;
 
@@ -59,7 +59,7 @@ export function summary(row: DbRow): OrderSummary {
 async function unprintedCount(scope: BranchScope) {
   const branch = branchClause(scope);
   const row = (await db.execute({
-    sql: `SELECT COUNT(*) AS n FROM orders WHERE ${KITCHEN_VISIBLE} AND ${branch.sql} AND print_count=0 AND ${printableSql}`,
+    sql: `SELECT COUNT(*) AS n FROM orders WHERE ${CMS_KITCHEN} AND ${branch.sql} AND print_count=0 AND ${printableSql}`,
     args: branch.args,
   })).rows[0];
   return Number(row.n);
@@ -70,7 +70,7 @@ export async function listOrders(scope: BranchScope, query: OrderQuery) {
   // Branch staff keep their server scope; only owners may narrow via query.branch.
   const selectedScope = operationScope(scope, scope.kind === 'all' ? query.branch : undefined);
   const branch = branchClause(selectedScope);
-  const where = [KITCHEN_VISIBLE, branch.sql];
+  const where = [CMS_KITCHEN, branch.sql];
   if (query.view) where.push(query.view === 'active' ? statusInSql(activeStatuses) : statusInSql(terminalStatuses));
   const args: (string | number)[] = [...branch.args];
   if (query.unprinted) where.push('print_count=0');
@@ -116,14 +116,14 @@ export async function listOrders(scope: BranchScope, query: OrderQuery) {
   const count = followCursor ? Number((await db.execute({ sql: `SELECT COUNT(*) AS n FROM orders WHERE ${branch.sql} AND ${predicate}`, args: [...branch.args, ...args] })).rows[0].n) : 0;
   const arrivedCount = query.arrivedSince
     ? Number((await db.execute({
-      sql: `SELECT COUNT(*) AS n FROM orders WHERE ${KITCHEN_VISIBLE} AND ${branch.sql} AND customer_arrived_at>?`,
+      sql: `SELECT COUNT(*) AS n FROM orders WHERE ${CMS_KITCHEN} AND ${branch.sql} AND customer_arrived_at>?`,
       args: [...branch.args, query.arrivedSince],
     })).rows[0].n)
     : 0;
   const cutoff = new Date(Date.now() - AUTO_PRINT_WINDOW_MS).toISOString();
   const autoPrint = (await db.execute({
     sql: `SELECT id,branch_id,status,payment_method,paid_at,total_minor,created_at,customer_name,customer_phone,car_plate,order_number,print_count,printed_at,customer_arrived_at
-      FROM orders WHERE ${KITCHEN_VISIBLE} AND ${branch.sql} AND print_count=0 AND print_claimed_at IS NULL AND ${printableSql}
+      FROM orders WHERE ${CMS_KITCHEN} AND ${branch.sql} AND print_count=0 AND print_claimed_at IS NULL AND ${printableSql}
       AND ${LIVE_SORT_SQL}>=? ORDER BY ${LIVE_SORT_SQL}, id`,
     args: [...branch.args, cutoff],
   })).rows.map(row => summary(row));
@@ -146,7 +146,7 @@ export async function listOrders(scope: BranchScope, query: OrderQuery) {
 export async function detailOrder(scope: BranchScope, id: string): Promise<OrderDetailData> {
   await initOrders();
   const branch = branchClause(scope);
-  const row = (await db.execute({ sql: `SELECT * FROM orders WHERE id=? AND ${branch.sql} AND ${KITCHEN_VISIBLE}`, args: [id, ...branch.args] })).rows[0];
+  const row = (await db.execute({ sql: `SELECT * FROM orders WHERE id=? AND ${branch.sql} AND ${CMS_KITCHEN}`, args: [id, ...branch.args] })).rows[0];
   if (!row) throw new OrderError('NOT_FOUND', 404);
   const history = (await db.execute({ sql: "SELECT at,diff,label FROM audit WHERE entity_type='order' AND entity_id=? AND action='order.status' ORDER BY at DESC, id DESC", args: [id] })).rows;
   const snapshot = JSON.parse(String(row.snapshot));
@@ -180,7 +180,7 @@ export async function transitionOrder(scope: BranchScope, id: string, input: Sta
   const result = await db.batch([
     { sql: `UPDATE orders SET status=?, updated_at=?,
         purge_after=CASE WHEN ? IN ('completed','cancelled') THEN ? ELSE purge_after END
-        WHERE id=? AND ${branch.sql} AND status=? AND ${KITCHEN_VISIBLE}
+        WHERE id=? AND ${branch.sql} AND status=? AND ${CMS_KITCHEN}
         AND (?!='refunded' OR paid_at IS NOT NULL)
         AND (?!='completed' OR paid_at IS NOT NULL OR (payment_method='pay_at_pickup' AND ?=1))`,
       args: [input.to, at, input.to, purge, id, ...branch.args, input.expected, input.to, input.to, Number(recordPayment)] },

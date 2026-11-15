@@ -2,10 +2,14 @@ import { initDb, db, databaseUrl } from "@/cms/db";
 import { orderDatabaseAllowed, OrderingUnavailable } from "@/ordering/guard";
 import type { BranchId } from "@/branches/branches";
 import type { OrderSnapshot } from "@/ordering/checkout/quote";
+import { ORDER_SURFACE_POS_SQL } from "@/ordering/surface";
 import { toOxiposOrder, type OxiposOrder, type PosExportSource } from "./map-order";
 
-/** POS pull is kitchen relay only. Payment is out of band (web or counter). */
-const POS_EXPORT_ELIGIBLE = `status NOT IN ('cancelled')`;
+/**
+ * Restaurant-surface tickets only. Pickup/CMS orders never enter this list.
+ * Payment stays out of band (card machine / counter) for this path.
+ */
+const POS_EXPORT_ELIGIBLE = `status NOT IN ('cancelled') AND ${ORDER_SURFACE_POS_SQL}`;
 
 async function requireOrderDb() {
   if (!orderDatabaseAllowed(databaseUrl)) throw new OrderingUnavailable();
@@ -91,7 +95,7 @@ export async function acceptOxiposOrder(posExportId: number): Promise<"ok" | "mi
   const now = new Date().toISOString();
   const result = await db.execute({
     sql: `UPDATE orders SET accepted_by_pos_at=COALESCE(accepted_by_pos_at, ?), updated_at=?
-            WHERE pos_export_id=? AND status NOT IN ('cancelled')`,
+            WHERE pos_export_id=? AND status NOT IN ('cancelled') AND ${ORDER_SURFACE_POS_SQL}`,
     args: [now, now, posExportId],
   });
   return result.rowsAffected === 1 ? "ok" : "missing";

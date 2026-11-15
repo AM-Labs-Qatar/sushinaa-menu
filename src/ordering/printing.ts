@@ -3,7 +3,7 @@ import type { DbRow } from '@/cms/sql';
 import { db } from '@/cms/db';
 import { auditInsert, type AuditContext } from '@/cms/audit';
 import { initOrders } from './checkout/repository';
-import { KITCHEN_VISIBLE } from './visibility';
+import { CMS_KITCHEN } from './visibility';
 import { OrderError } from './http';
 import { branchClause, type BranchScope } from './scope';
 import { AUTO_PRINT_WINDOW_MS } from './config';
@@ -91,7 +91,7 @@ export async function loadTicket(scope: BranchScope, id: string): Promise<DbRow>
   await initOrders();
   const branch = branchClause(scope);
   const row = (await db.execute({
-    sql: `SELECT * FROM orders WHERE id=? AND ${branch.sql} AND ${KITCHEN_VISIBLE}`,
+    sql: `SELECT * FROM orders WHERE id=? AND ${branch.sql} AND ${CMS_KITCHEN}`,
     args: [id, ...branch.args],
   })).rows[0];
   if (!row) throw new OrderError('NOT_FOUND', 404);
