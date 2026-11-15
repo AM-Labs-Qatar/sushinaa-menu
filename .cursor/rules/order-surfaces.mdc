@@ -1,0 +1,15 @@
+---
+description: Pickup CMS vs in-restaurant OXiPOS — never mix kitchen feeds
+alwaysApply: true
+---
+
+# Order surfaces (separation of concerns)
+
+Two paths. Keep them separate.
+
+1. **Car-collection pickup** — customer storefront with pickup (`order.*` / `STOREFRONT_MODE=pickup`). Payment via our checkout. Kitchen = **CMS live Orders**. Never export these tickets to OXiPOS.
+2. **At the restaurant** — staff show an order website that **does not** offer car-collection pickup. Payment = separate card machine / counter. Kitchen relay = **OXiPOS** pull API only on that non-pickup server.
+
+OXiPOS must only call a server that does not expose the pickup option. Do not point POS at the pickup host, do not feed pickup CMS orders into `/api/pos/orders`, and do not let POS acceptance drive CMS pickup kitchen status.
+
+Canonical detail: `docs/OXIPOS.md`, `docs/CAR-COLLECTION.md`, `docs/environments.md`.

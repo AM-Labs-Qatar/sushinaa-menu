@@ -21,3 +21,5 @@ Production is https://sushinaa-menu.vercel.app (`main`, project `sushinaa-menu`,
 Dev is https://test-dev-abu-iqbal-projects.vercel.app (project `test-dev`, dev Turso database). Local work uses `data/menu.db` or that dev database. Pull requests go into `dev`.
 
 Sadad / online pickup payment: read and update `docs/SADAD-CHECKOUT.md` when changing payment checkout, gateway, or ledger code.
+
+**Order surfaces:** car-collection pickup → CMS live Orders. OXiPOS only on a server that does **not** offer pickup (in-restaurant order site; pay on a separate card machine). Never mix those kitchen feeds. See `docs/OXIPOS.md` and `.cursor/rules/order-surfaces.mdc`.

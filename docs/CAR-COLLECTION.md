@@ -12,6 +12,8 @@ Prices, availability and branch opening hours are checked server-side. Duplicate
 
 ## Staff orders
 
+**Pickup kitchen is the CMS.** Car-collection orders placed on the pickup storefront appear on authenticated `/admin` Orders — not on OXiPOS. OXiPOS is only for an in-restaurant order website that does **not** offer car-collection pickup (staff show the site; payment is a separate card machine). See [`docs/OXIPOS.md`](OXIPOS.md).
+
 The existing authenticated `/admin` shell has an Orders section with branch/status/date/search filters, 25-row pages, full customer contact for kitchen staff, the paper receipt and status history. Status writes use a conditional update and audit in one transaction; competing writes return `409 STALE_STATUS`. Pickup collection records payment in that same request. Cancellation uses fixed reason codes to keep personal information out of the audit label.
 
 Orders poll every 15 seconds while the tab is visible, including while another admin section is open. A badge counts unread orders. Staff can enable a bundled notification sound; their preference is stored locally. Browser autoplay restrictions may require enabling sound again after opening a new session. Existing menu-management flows are unchanged.

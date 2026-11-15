@@ -10,18 +10,19 @@ Sushinaa has two databases and two sites. Production is the live restaurant menu
 | Dev (public) | https://test-dev-abu-iqbal-projects.vercel.app | `dev`, deployed as that project's production | `test-dev` | Dev Turso database `sushinaa-cms-dev` |
 | Local | http://localhost:3005 | any branch | none | `file:./data/menu.db`, unless you point it at the dev database |
 
-## OXiPOS (online order pull)
+## OXiPOS (in-restaurant pull only)
 
-See [`docs/OXIPOS.md`](OXIPOS.md). Set `OXIPOS_API_KEY` and `OXIPOS_SHOP_IDS` on the ordering deployment only. Do not put the live key on production until cutover.
+See [`docs/OXIPOS.md`](OXIPOS.md). **Separation:** car-collection pickup stays in the **CMS**. OXiPOS must only call a server that does **not** expose the pickup option (in-branch order site; pay on a separate card machine). Do not put `OXIPOS_*` on the pickup storefront deployment as the POS pull target. Set `OXIPOS_API_KEY` and `OXIPOS_SHOP_IDS` only on the non-pickup ordering server. Do not put the live key on production until cutover.
 
 ## Storefronts (menu vs pickup)
 
-One deployment serves two customer storefronts from the same catalog:
+One deployment can serve two customer storefronts from the same catalog:
 
-| Storefront | Typical URL | Channel | UI |
+| Storefront | Typical URL | Channel | Kitchen |
 | --- | --- | --- | --- |
-| View-only menu | `https://sushinaamenu.qa/{branch}` | `menu` | Browse only |
-| Pickup ordering | `https://order.sushinaamenu.qa/{branch}` | `pickup` | Cart → CMS orders |
+| View-only menu | `https://sushinaamenu.qa/{branch}` | `menu` | n/a |
+| Pickup ordering | `https://order.sushinaamenu.qa/{branch}` | `pickup` | **CMS** live Orders |
+| In-restaurant order site (no car-collection pickup) | separate host / deployment | not pickup | **OXiPOS** pull only |
 
 Host `order.*` selects **pickup**. Any other host selects **menu**. For local and for `test-dev` before the `order.` DNS record exists, set `STOREFRONT_MODE=pickup` (or `menu`) to override the host. Legacy aliases `order` / `browse` still work. Attach both apex and `order.` domains on the Vercel project that should take pickup; keep production apex as **menu** (do not set `STOREFRONT_MODE=pickup` on live `sushinaa-menu` until cutover).
 
