@@ -1,6 +1,21 @@
 # OXiPOS pull API (our contract)
 
-OXiPOS does not push menus into this app. It **pulls** pending online pickup orders from our server about every 30 seconds, then POSTs acceptance.
+## Separation of concerns (critical)
+
+Two different customer paths. Do not mix them.
+
+| Path | Who | Payment | Kitchen |
+| --- | --- | --- | --- |
+| **Car-collection pickup** | Customer orders from home / car on the **pickup** storefront (`order.*` or `STOREFRONT_MODE=pickup`) | Our checkout (Sadad / mock / pay-at-pickup) | **Our CMS** live Orders — not OXiPOS |
+| **At the restaurant** | Guest is already in branch; staff show an **order website that does not offer car-collection pickup** | Separate card machine / counter — not our online pickup checkout | **OXiPOS** pulls from that non-pickup server |
+
+**OXiPOS must only call a server that does not expose the pickup (car-collection) option.** Pickup orders stay in the CMS. Do not point the POS pull URL at the pickup storefront, do not feed CMS pickup tickets into OXiPOS, and do not let POS acceptance drive CMS kitchen status.
+
+That boundary is intentional product architecture, not a temporary quirk.
+
+## What this API is
+
+OXiPOS does not push menus into this app. For the **in-restaurant** path only, it **pulls** pending orders from a **non-pickup** server about every 30 seconds, then POSTs acceptance.
 
 Depend only on this document and the vendor guide field names. Do not encode poll interval or User-Agent.
 
@@ -15,7 +30,9 @@ Auth header on every request: `X-POS-API-Key: {OXIPOS_API_KEY}`. Invalid or miss
 
 ## Order object (exact names)
 
-`id` (integer `pos_export_id`), `customer_name`, `customer_phone`, `address_text` (car-collection summary), `items[]` with `item_name`, `quantity`, `price_sold`, optional `product_id` (our `posSku`), `options_display`, `notes`.
+`id` (integer `pos_export_id`), `customer_name`, `customer_phone`, `address_text`, `items[]` with `item_name`, `quantity`, `price_sold`, optional `product_id` (our `posSku`), `options_display`, `notes`.
+
+For in-restaurant tickets, `address_text` is not a car-collection summary. Do not reuse pickup car fields for this path.
 
 ## Config
 
@@ -24,15 +41,15 @@ Auth header on every request: `X-POS-API-Key: {OXIPOS_API_KEY}`. Invalid or miss
 | `OXIPOS_API_KEY` | Shared secret. Pull API refuses all callers when unset. |
 | `OXIPOS_SHOP_IDS` | JSON map of branch slug → shop id, e.g. `{"down-town":"101"}`. |
 
-Give the restaurant: base URL (`https://…/api/pos/orders/`), shop ids, API key, and the POS SKU CSV from **Admin → Menu → Export POS SKUs** (`GET /api/admin/menu/pos-sku-export`). They fill the blank `oxiposProductId` column and configure `weborder.map.{posSku}={oxiposProductId}` on the POS.
+Give the restaurant: base URL of the **non-pickup** ordering server (`https://…/api/pos/orders/`), shop ids, API key, and the POS SKU CSV from **Admin → Menu → Export POS SKUs** (`GET /api/admin/menu/pos-sku-export`). They fill the blank `oxiposProductId` column and configure `weborder.map.{posSku}={oxiposProductId}` on the POS.
 
 Our `posSku` values are assigned automatically as `SU-{DISH_ID}` in uppercase (e.g. dish `sushinaa-burger` → `SU-SUSHINAA-BURGER`). Stable, unique, and safe for POS map keys.
 
-## Eligibility
+## Eligibility (in-restaurant / POS path only)
 
-OXiPOS is **kitchen relay only**. There is no payment flow on this API. Payment stays on our web checkout or at the counter.
+OXiPOS is **kitchen relay for the non-pickup order website**. There is no payment flow on this API — payment is the branch card machine / counter.
 
-Any non-cancelled placed order is eligible for the pending list (including unpaid online orders). Cancelled orders are excluded. CMS Orders UI stays; acceptance only sets `accepted_by_pos_at`.
+Do **not** treat CMS car-collection pickup orders as POS pending tickets. CMS Orders UI owns pickup; POS acceptance only sets `accepted_by_pos_at` on the in-restaurant feed and must not move CMS kitchen status for pickup.
 
 ## Live database
 
