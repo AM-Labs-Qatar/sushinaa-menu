@@ -5,6 +5,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createClient } from "@libsql/client";
 import { copyMenuAndMedia, CopyRefused, readOnlySource } from "../scripts/copy-to-dev";
+import { copyDevMenuToLive } from "../scripts/copy-dev-menu-to-live";
 import { migrate, MigrateRefused } from "../scripts/migrate";
 import { checkMigrationDir, migrationViolations } from "../scripts/check-migrations";
 import { secretHits } from "../scripts/secret-scan";
@@ -161,4 +162,60 @@ test("migration files cannot drop or rename, and the secret scan catches tokens"
     1,
   );
   assert.deepEqual(secretHits(".env.example", "CMS_DATABASE_AUTH_TOKEN=\"abcdefghijklm\""), []);
+});
+
+test("dev→live promote copies menu/media with confirm and refuses without it", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "sushinaa-promote-"));
+  const sourceUrl = await sourceDb(dir, 8);
+  const targetUrl = `file:${dir}/live.db`;
+  const live = createClient({ url: targetUrl });
+  await live.batch(SCHEMA, "write");
+  await live.execute({
+    sql: "INSERT INTO menu (id, revision, content) VALUES (1, 1, ?)",
+    args: [JSON.stringify({ dishes: [{ id: "old" }] })],
+  });
+  await live.execute({
+    sql: "INSERT INTO sessions (token, expires) VALUES (?, ?)",
+    args: ["keep-me", 9],
+  });
+  live.close();
+
+  await assert.rejects(
+    copyDevMenuToLive({ sourceUrl, targetUrl, allowFileFixture: true }),
+    /CONFIRM_LIVE_MENU_COPY/,
+  );
+
+  const result = await copyDevMenuToLive({
+    sourceUrl,
+    targetUrl,
+    allowFileFixture: true,
+    confirm: "sushinaa-cms",
+  });
+  assert.deepEqual(result, { revision: 8, dishes: 2, media: 1 });
+
+  const after = createClient({ url: targetUrl });
+  const menu = await after.execute("SELECT revision, content FROM menu WHERE id = 1");
+  assert.equal(Number(menu.rows[0].revision), 8);
+  const sessions = await after.execute("SELECT token FROM sessions");
+  assert.equal(String(sessions.rows[0].token), "keep-me");
+  after.close();
+});
+
+test("dev→live promote refuses non-live targets outside fixtures", async () => {
+  await assert.rejects(
+    copyDevMenuToLive({
+      sourceUrl: "libsql://sushinaa-cms-dev-example.turso.io",
+      targetUrl: "libsql://someone-else.turso.io",
+      confirm: "sushinaa-cms",
+    }),
+    /target must be the live database/i,
+  );
+  await assert.rejects(
+    copyDevMenuToLive({
+      sourceUrl: `libsql://${LIVE_DATABASE_HOST}`,
+      targetUrl: `libsql://${LIVE_DATABASE_HOST}`,
+      confirm: "sushinaa-cms",
+    }),
+    /different databases/i,
+  );
 });

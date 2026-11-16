@@ -9,6 +9,7 @@
     "lint": "eslint",
     "cms:seed": "tsx scripts/seed.ts",
     "db:copy-to-dev": "tsx scripts/copy-to-dev.ts",
+    "db:copy-dev-menu-to-live": "tsx scripts/copy-dev-menu-to-live.ts",
     "db:migrate": "tsx scripts/migrate.ts",
     "db:check-migrations": "tsx scripts/check-migrations.ts",
     "dev:strip-dish-marker": "tsx scripts/dev-strip-dish-marker.ts",

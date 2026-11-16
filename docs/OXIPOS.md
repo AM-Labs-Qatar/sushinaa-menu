@@ -13,6 +13,8 @@ Two different customer paths. Do not mix them.
 
 That boundary is intentional product architecture, not a temporary quirk.
 
+**Current production status:** OXiPOS remains **backend-only**. Leave `OXIPOS_*` unset on `sushinaa-menu` / `menu.sushinaa.qa` / `order.sushinaa.qa` until a separate non-pickup ordering host is cut over.
+
 ## What this API is
 
 OXiPOS does not push menus into this app. For the **in-restaurant** path only, it **pulls** pending orders from a **non-pickup** server about every 30 seconds, then POSTs acceptance.

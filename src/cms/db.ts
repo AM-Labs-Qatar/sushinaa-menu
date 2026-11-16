@@ -80,8 +80,7 @@ export function initDb() {
     const { assertDatabaseAllowed } = await import("./env-guard");
     await assertDatabaseAllowed(db);
     await db.batch(startupStatements(databaseUrl), "write");
-    // Abubaker, 2026-10-25: staff tables stay off the production database.
-    // Order columns stay behind the same guard.
+    // Staff/order schema stays off the live database until ORDERING_LIVE_ENABLED=1.
     if (orderDatabaseAllowed(databaseUrl)) await ensureOrderColumns();
   })().catch((e) => {
     ready = undefined;
