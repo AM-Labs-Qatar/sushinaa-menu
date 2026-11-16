@@ -14,15 +14,37 @@ test('databaseHost strips trailing dots and ignores file urls', () => {
 });
 
 test('orderDatabaseAllowed refuses live host aliases libsql still dials', () => {
-  const withUserinfo = ['libsql://', 'evil.test', String.fromCharCode(64), LIVE_DATABASE_HOST].join('');
-  const withBackslashUserinfo = ['libsql://', 'evil.test', '\\', String.fromCharCode(64), LIVE_DATABASE_HOST].join('');
-  assert.equal(orderDatabaseAllowed(`libsql://${LIVE_DATABASE_HOST}`), false);
-  assert.equal(orderDatabaseAllowed(`libsql://${LIVE_DATABASE_HOST}.`), false);
-  assert.equal(orderDatabaseAllowed(`libsql://${LIVE_DATABASE_HOST}%2e`), false);
-  assert.equal(orderDatabaseAllowed(withBackslashUserinfo), false);
-  assert.equal(orderDatabaseAllowed(withUserinfo), false);
-  assert.equal(orderDatabaseAllowed('libsql://sushinaa-cms-dev-example.turso.io'), true);
-  assert.equal(orderDatabaseAllowed('file:./data/menu.db'), true);
-  assert.equal(touchesLiveDatabaseHost(withBackslashUserinfo), true);
-  assert.equal(touchesLiveDatabaseHost('libsql://sushinaa-cms-dev-example.turso.io'), false);
+  const previous = process.env.ORDERING_LIVE_ENABLED;
+  delete process.env.ORDERING_LIVE_ENABLED;
+  try {
+    const withUserinfo = ['libsql://', 'evil.test', String.fromCharCode(64), LIVE_DATABASE_HOST].join('');
+    const withBackslashUserinfo = ['libsql://', 'evil.test', '\\', String.fromCharCode(64), LIVE_DATABASE_HOST].join('');
+    assert.equal(orderDatabaseAllowed(`libsql://${LIVE_DATABASE_HOST}`), false);
+    assert.equal(orderDatabaseAllowed(`libsql://${LIVE_DATABASE_HOST}.`), false);
+    assert.equal(orderDatabaseAllowed(`libsql://${LIVE_DATABASE_HOST}%2e`), false);
+    assert.equal(orderDatabaseAllowed(withBackslashUserinfo), false);
+    assert.equal(orderDatabaseAllowed(withUserinfo), false);
+    assert.equal(orderDatabaseAllowed('libsql://sushinaa-cms-dev-example.turso.io'), true);
+    assert.equal(orderDatabaseAllowed('file:./data/menu.db'), true);
+    assert.equal(touchesLiveDatabaseHost(withBackslashUserinfo), true);
+    assert.equal(touchesLiveDatabaseHost('libsql://sushinaa-cms-dev-example.turso.io'), false);
+  } finally {
+    if (previous === undefined) delete process.env.ORDERING_LIVE_ENABLED;
+    else process.env.ORDERING_LIVE_ENABLED = previous;
+  }
+});
+
+test('orderDatabaseAllowed allows live only when ORDERING_LIVE_ENABLED=1', () => {
+  const previous = process.env.ORDERING_LIVE_ENABLED;
+  try {
+    process.env.ORDERING_LIVE_ENABLED = '1';
+    assert.equal(orderDatabaseAllowed(`libsql://${LIVE_DATABASE_HOST}`), true);
+    process.env.ORDERING_LIVE_ENABLED = 'true';
+    assert.equal(orderDatabaseAllowed(`libsql://${LIVE_DATABASE_HOST}`), false);
+    delete process.env.ORDERING_LIVE_ENABLED;
+    assert.equal(orderDatabaseAllowed(`libsql://${LIVE_DATABASE_HOST}`), false);
+  } finally {
+    if (previous === undefined) delete process.env.ORDERING_LIVE_ENABLED;
+    else process.env.ORDERING_LIVE_ENABLED = previous;
+  }
 });

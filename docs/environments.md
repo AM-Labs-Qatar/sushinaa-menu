@@ -6,13 +6,17 @@ Sushinaa has two databases and two sites. Production is the live restaurant menu
 
 | Site | URL | Git | Vercel project | Database |
 | --- | --- | --- | --- | --- |
-| Production | https://sushinaa-menu.vercel.app | `main` | `sushinaa-menu` | Live Turso database `sushinaa-cms` |
+| Production menu | https://menu.sushinaa.qa | `main` | `sushinaa-menu` | Live Turso database `sushinaa-cms` |
+| Production pickup | https://order.sushinaa.qa | `main` (same deploy) | `sushinaa-menu` | Live Turso database `sushinaa-cms` |
+| Legacy production alias | https://sushinaa-menu.vercel.app | `main` | `sushinaa-menu` | 301 → `menu.sushinaa.qa` (see `src/proxy.ts`) |
 | Dev (public) | https://test-dev-abu-iqbal-projects.vercel.app | `dev`, deployed as that project's production | `test-dev` | Dev Turso database `sushinaa-cms-dev` |
 | Local | http://localhost:3005 | any branch | none | `file:./data/menu.db`, unless you point it at the dev database |
 
-## OXiPOS (in-restaurant pull only)
+DNS for `sushinaa.qa` is at QHOST. Attach `menu.sushinaa.qa` and `order.sushinaa.qa` on the `sushinaa-menu` Vercel project. Do **not** set `STOREFRONT_MODE` on that project's Production — host selects the storefront.
 
-See [`docs/OXIPOS.md`](OXIPOS.md). **Separation:** car-collection pickup stays in the **CMS**. OXiPOS must only call a server that does **not** expose the pickup option (in-branch order site; pay on a separate card machine). Do not put `OXIPOS_*` on the pickup storefront deployment as the POS pull target. Set `OXIPOS_API_KEY` and `OXIPOS_SHOP_IDS` only on the non-pickup ordering server. Do not put the live key on production until cutover.
+## OXiPOS (backend only for now)
+
+See [`docs/OXIPOS.md`](OXIPOS.md). **Separation:** car-collection pickup stays in the **CMS**. OXiPOS code may ship as dormant backend; leave `OXIPOS_*` unset on `sushinaa-menu` until a separate non-pickup cutover. Do not put `OXIPOS_*` on the pickup storefront as the POS pull target.
 
 ## Storefronts (menu vs pickup)
 
@@ -20,11 +24,11 @@ One deployment can serve two customer storefronts from the same catalog:
 
 | Storefront | Typical URL | Channel | Kitchen |
 | --- | --- | --- | --- |
-| View-only menu | `https://sushinaamenu.qa/{branch}` | `menu` | n/a |
-| Pickup ordering | `https://order.sushinaamenu.qa/{branch}` | `pickup` | **CMS** live Orders |
-| In-restaurant order site (no car-collection pickup) | separate host / deployment | not pickup | **OXiPOS** pull only |
+| View-only menu | `https://menu.sushinaa.qa/{branch}` | `menu` | n/a |
+| Pickup ordering | `https://order.sushinaa.qa/{branch}` | `pickup` | **CMS** live Orders |
+| In-restaurant order site (no car-collection pickup) | separate host / deployment | not pickup | **OXiPOS** pull only (not enabled on production yet) |
 
-Host `order.*` selects **pickup**. Any other host selects **menu**. For local and for `test-dev` before the `order.` DNS record exists, set `STOREFRONT_MODE=pickup` (or `menu`) to override the host. Legacy aliases `order` / `browse` still work. Attach both apex and `order.` domains on the Vercel project that should take pickup; keep production apex as **menu** (do not set `STOREFRONT_MODE=pickup` on live `sushinaa-menu` until cutover).
+Host `order.*` selects **pickup**. Any other host selects **menu**. For local and for `test-dev` before the `order.` DNS record exists, set `STOREFRONT_MODE=pickup` (or `menu`) to override the host. Legacy aliases `order` / `browse` still work.
 
 "Preview" is a Vercel word for a deployment that is not the production deployment of a project, such as a pull request. It is not the dev site. Do not treat a `sushinaa-menu` preview as a safe place to edit the menu. The dev site is `test-dev`.
 
@@ -85,7 +89,7 @@ Register with Sadad: callback `…/api/payments/callback`, webhook `…/api/paym
 
 `src/instrumentation.ts` and `initDb()` check the database once at startup.
 
-- Production (`VERCEL_ENV=production`) must use the live hostname and must not use a mock payment provider. Online Sadad (`PAYMENT_PROVIDER=sadad` + `SADAD_*`) is for paying a **pickup** order before collection — enable on `test-dev` with the sandbox key first; do not put a live Sadad secret on production until cutover is approved.
+- Production (`VERCEL_ENV=production`) must use the live hostname and must not use a mock payment provider. Online Sadad (`PAYMENT_PROVIDER=sadad` + `SADAD_*`) is for paying a **pickup** order before collection — enable on `test-dev` with the sandbox key first; do not put a live Sadad secret on production until cutover is approved. Live checkout also requires `ORDERING_LIVE_ENABLED=1`.
 - Anything else must not use the live hostname and must see the `development` marker.
 - `CMS_ENV_GUARD=enforce` refuses to start. Any other value, including unset, only logs. The log prefix is `cms-env-guard` and it does not include URLs or tokens.
 - The flag is `enforce` on dev and on the production variable. The live deployment has not been rebuilt, so the running site does not enforce yet. That starts when `dev` is released to `main`.
@@ -97,6 +101,10 @@ On `sushinaa-menu`, a deployment that is not production sends `X-Robots-Tag: noi
 ## Copy and migrations
 
 `npm run db:copy-to-dev` reads only `menu` and `media` from `SOURCE_DATABASE_URL` with a read-only token, and writes them to `TARGET_DATABASE_URL`. It refuses the live hostname as a target, refuses a target whose marker is not `development`, and writes that marker on an empty target. It does not read `sessions`, `audit`, or `login_attempts`. Run it again to refresh dev. Those four variables are shell variables for that command, not Vercel variables.
+
+`npm run db:copy-dev-menu-to-live` is the reverse direction for cutover: source must be the **dev** database (marker `development`), target must be **live**, and `CONFIRM_LIVE_MENU_COPY=sushinaa-cms` is required. It writes only `menu` and `media` and does not touch live `env_marker`, sessions, audit, or orders. Shell variables only — never store the confirmation in Vercel.
+
+Live ordering stays off until `ORDERING_LIVE_ENABLED=1` on `sushinaa-menu` Production. Unset (default) keeps the live Turso host refused for order tables and checkout. After that flag is set, app bootstrap creates order/staff schema on live; do not run `npm run db:migrate` against live.
 
 `npm run db:migrate` applies numbered files in `db/migrations/` and records them in `schema_migrations`. `0001_baseline.sql` is the current schema and uses `IF NOT EXISTS` only. CI fails a migration line that contains `DROP` or `RENAME`.
 
