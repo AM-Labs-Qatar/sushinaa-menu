@@ -6,29 +6,33 @@ Sushinaa has two databases and two sites. Production is the live restaurant menu
 
 | Site | URL | Git | Vercel project | Database |
 | --- | --- | --- | --- | --- |
-| Production menu | https://menu.sushinaa.qa | `main` | `sushinaa-menu` | Live Turso database `sushinaa-cms` |
+| Production on-site | https://menu.sushinaa.qa | `main` | `sushinaa-menu` | Live Turso database `sushinaa-cms` |
 | Production pickup | https://order.sushinaa.qa | `main` (same deploy) | `sushinaa-menu` | Live Turso database `sushinaa-cms` |
+| Production admin / CMS | https://admin.sushinaa.qa | `main` (same deploy) | `sushinaa-menu` | Live Turso database `sushinaa-cms` |
 | Legacy production alias | https://sushinaa-menu.vercel.app | `main` | `sushinaa-menu` | 301 → `menu.sushinaa.qa` (see `src/proxy.ts`) |
 | Dev (public) | https://test-dev-abu-iqbal-projects.vercel.app | `dev`, deployed as that project's production | `test-dev` | Dev Turso database `sushinaa-cms-dev` |
 | Local | http://localhost:3005 | any branch | none | `file:./data/menu.db`, unless you point it at the dev database |
 
-DNS for `sushinaa.qa` is at QHOST. Attach `menu.sushinaa.qa` and `order.sushinaa.qa` on the `sushinaa-menu` Vercel project. Do **not** set `STOREFRONT_MODE` on that project's Production — host selects the storefront.
+DNS for `sushinaa.qa` is on Vercel (registrar may still be QHOST). Attach `menu`, `order`, and `admin` on **`sushinaa-menu` only** — never on `test-dev`. Do **not** set `STOREFRONT_MODE` on `sushinaa-menu` Production — host selects the storefront. On `admin.sushinaa.qa`, the CMS is at `/` (`/login` for sign-in); `/admin` redirects to those root paths.
 
-## OXiPOS (backend only for now)
+### test-dev isolation
 
-See [`docs/OXIPOS.md`](OXIPOS.md). **Separation:** car-collection pickup stays in the **CMS**. OXiPOS code may ship as dormant backend; leave `OXIPOS_*` unset on `sushinaa-menu` until a separate non-pickup cutover. Do not put `OXIPOS_*` on the pickup storefront as the POS pull target.
+`test-dev` is a separate Vercel project and a separate Turso database. It must **not** share `order.sushinaa.qa`, `menu.sushinaa.qa`, `admin.sushinaa.qa`, live Turso tokens, or live Sadad keys. Sandbox Sadad on `test-dev` uses `SADAD_PUBLIC_ORIGIN=https://test-dev-abu-iqbal-projects.vercel.app` only.
+
+## OXiPOS (on-site / menu host)
+
+See [`docs/OXIPOS.md`](OXIPOS.md). **Separation:** car-collection pickup stays in the **CMS**. On-site ordering on `menu.sushinaa.qa` is the OXiPOS pull target (pay at the branch card machine / counter — not Sadad). Code and host gates are ready; leave `OXIPOS_*` unset on Production until the restaurant maps SKUs and points POS at `https://menu.sushinaa.qa/api/pos/orders/`. Flip-on is env + POS config only — never put `OXIPOS_*` on the pickup path or point POS at `order.*`.
 
 ## Storefronts (menu vs pickup)
 
-One deployment can serve two customer storefronts from the same catalog:
+One deployment serves two customer storefronts from the same catalog:
 
-| Storefront | Typical URL | Channel | Kitchen |
-| --- | --- | --- | --- |
-| View-only menu | `https://menu.sushinaa.qa/{branch}` | `menu` | n/a |
-| Pickup ordering | `https://order.sushinaa.qa/{branch}` | `pickup` | **CMS** live Orders |
-| In-restaurant order site (no car-collection pickup) | separate host / deployment | not pickup | **OXiPOS** pull only (not enabled on production yet) |
+| Storefront | Typical URL | Channel | Payment | Kitchen |
+| --- | --- | --- | --- | --- |
+| On-site ordering | `https://menu.sushinaa.qa/{branch}` | `menu` | Branch POS / counter (not Sadad) | **OXiPOS** pull |
+| Pickup ordering | `https://order.sushinaa.qa/{branch}` | `pickup` | **Live Sadad** (or pay-at-pickup until cutover) | **CMS** live Orders |
 
-Host `order.*` selects **pickup**. Any other host selects **menu**. For local and for `test-dev` before the `order.` DNS record exists, set `STOREFRONT_MODE=pickup` (or `menu`) to override the host. Legacy aliases `order` / `browse` still work.
+Host `order.*` selects **pickup**. Anything else (including `menu.*`) selects **menu**. For local and for `test-dev` before the `order.` DNS record exists, set `STOREFRONT_MODE=pickup` (or `menu`) to override the host. Legacy aliases `order` / `browse` still work.
 
 "Preview" is a Vercel word for a deployment that is not the production deployment of a project, such as a pull request. It is not the dev site. Do not treat a `sushinaa-menu` preview as a safe place to edit the menu. The dev site is `test-dev`.
 
@@ -70,9 +74,9 @@ The dev hostname starts with `sushinaa-cms-dev-`. The dev database has an `env_m
 
 Set `CRON_SECRET` on `test-dev` (and any other hosted non-live project that runs `vercel.json` crons) so Vercel Cron can call `/api/cron/purge-orders`. Without it the route returns 401. Do not rely on purge against the live Turso host; the route refuses that database.
 
-### Sadad (online pay before pickup)
+### Sadad (online pay before pickup — `order.*` only)
 
-Product remains car-collection pickup. Sadad only replaces pay-at-pickup/mock for that order.
+Sadad is only for **pickup** on `order.sushinaa.qa`. Do not bind live Sadad to `menu.sushinaa.qa` (on-site / POS path).
 
 On **`test-dev` Production** (dev database), set each variable separately when the sandbox merchant is ready:
 
@@ -83,7 +87,7 @@ On **`test-dev` Production** (dev database), set each variable separately when t
 | `SADAD_MERCHANT_ID` | Sandbox merchant id |
 | `SADAD_PUBLIC_ORIGIN` | `https://test-dev-abu-iqbal-projects.vercel.app` (no trailing slash) |
 
-Register with Sadad: callback `…/api/payments/callback`, webhook `…/api/payments/webhook`. Do not put a live key on `sushinaa-menu` Production until sandbox sign-off. Local/CI keeps `PAYMENT_PROVIDER` unset or `mock`.
+Register with Sadad: callback `…/api/payments/callback`, webhook `…/api/payments/webhook`. Live Production uses `SADAD_PUBLIC_ORIGIN=https://order.sushinaa.qa` and the same callback/webhook paths on that host. Do not put a live key on Production until sandbox sign-off. Local/CI keeps `PAYMENT_PROVIDER` unset or `mock`.
 
 ## Guard
 
