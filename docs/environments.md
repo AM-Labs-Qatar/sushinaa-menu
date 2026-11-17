@@ -6,17 +6,22 @@ Sushinaa has two databases and two sites. Production is the live restaurant menu
 
 | Site | URL | Git | Vercel project | Database |
 | --- | --- | --- | --- | --- |
-| Production menu | https://menu.sushinaa.qa | `main` | `sushinaa-menu` | Live Turso database `sushinaa-cms` |
+| Production on-site | https://menu.sushinaa.qa | `main` | `sushinaa-menu` | Live Turso database `sushinaa-cms` |
 | Production pickup | https://order.sushinaa.qa | `main` (same deploy) | `sushinaa-menu` | Live Turso database `sushinaa-cms` |
+| Production admin / CMS | https://admin.sushinaa.qa/admin | `main` (same deploy) | `sushinaa-menu` | Live Turso database `sushinaa-cms` |
 | Legacy production alias | https://sushinaa-menu.vercel.app | `main` | `sushinaa-menu` | 301 → `menu.sushinaa.qa` (see `src/proxy.ts`) |
 | Dev (public) | https://test-dev-abu-iqbal-projects.vercel.app | `dev`, deployed as that project's production | `test-dev` | Dev Turso database `sushinaa-cms-dev` |
 | Local | http://localhost:3005 | any branch | none | `file:./data/menu.db`, unless you point it at the dev database |
 
-DNS for `sushinaa.qa` is at QHOST. Attach `menu.sushinaa.qa` and `order.sushinaa.qa` on the `sushinaa-menu` Vercel project. Do **not** set `STOREFRONT_MODE` on that project's Production — host selects the storefront.
+DNS for `sushinaa.qa` is on Vercel (registrar may still be QHOST). Attach `menu`, `order`, and `admin` on **`sushinaa-menu` only** — never on `test-dev`. Do **not** set `STOREFRONT_MODE` on `sushinaa-menu` Production — host selects the storefront.
+
+### test-dev isolation
+
+`test-dev` is a separate Vercel project and a separate Turso database. It must **not** share `order.sushinaa.qa`, `menu.sushinaa.qa`, `admin.sushinaa.qa`, live Turso tokens, or live Sadad keys. Sandbox Sadad on `test-dev` uses `SADAD_PUBLIC_ORIGIN=https://test-dev-abu-iqbal-projects.vercel.app` only.
 
 ## OXiPOS (on-site / menu host)
 
-See [`docs/OXIPOS.md`](OXIPOS.md). **Separation:** car-collection pickup stays in the **CMS**. On-site ordering on `menu.sushinaa.qa` is the OXiPOS pull target (pay at the branch card machine / counter — not Sadad). Leave `OXIPOS_*` unset on Production until that cutover. Never put `OXIPOS_*` on the pickup path or point POS at `order.*`.
+See [`docs/OXIPOS.md`](OXIPOS.md). **Separation:** car-collection pickup stays in the **CMS**. On-site ordering on `menu.sushinaa.qa` is the OXiPOS pull target (pay at the branch card machine / counter — not Sadad). Code and host gates are ready; leave `OXIPOS_*` unset on Production until the restaurant maps SKUs and points POS at `https://menu.sushinaa.qa/api/pos/orders/`. Flip-on is env + POS config only — never put `OXIPOS_*` on the pickup path or point POS at `order.*`.
 
 ## Storefronts (menu vs pickup)
 
