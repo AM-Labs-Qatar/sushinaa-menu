@@ -25,7 +25,7 @@ function useShowAmLabsCredit() {
 
 type Placement = "branch" | "ticket";
 
-/** Dev / test-dev only — omitted when the app is on the live restaurant database. */
+/** Studio credit — branch picker and cart ticket. */
 export function AmLabsCredit({ placement }: { placement: Placement }) {
   if (!useShowAmLabsCredit()) return null;
   return (
