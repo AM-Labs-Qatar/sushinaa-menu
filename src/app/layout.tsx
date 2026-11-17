@@ -8,6 +8,8 @@ import { requestLang } from "@/i18n/request-lang";
 import { getMenu } from "@/cms/repository";
 import { publicMenu } from "@/cms/schema";
 import { MenuProvider } from "@/cms/context";
+import { AmLabsCreditProvider } from "@/components/site/AmLabsCredit";
+import { showAmLabsCredit } from "@/lib/deploy-env";
 import "./globals.css";
 
 const display = localFont({
@@ -137,13 +139,15 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         {/* Dishes ship only with the menu page (src/app/page.tsx). */}
         <MenuProvider menu={{ ...publicMenu(menu), dishes: [] }}>
           <LocaleProvider initial={lang}>
-            <SkipLink />
-            <script
-              type="application/ld+json"
-              dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c") }}
-            />
-            {children}
-            <Analytics />
+            <AmLabsCreditProvider show={showAmLabsCredit()}>
+              <SkipLink />
+              <script
+                type="application/ld+json"
+                dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c") }}
+              />
+              {children}
+              <Analytics />
+            </AmLabsCreditProvider>
           </LocaleProvider>
         </MenuProvider>
       </body>
