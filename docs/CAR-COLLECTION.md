@@ -4,7 +4,7 @@ Work stays on feature branches; pull requests target `dev`. The product is **car
 
 ## Customer journey
 
-`/` is the branch picker. Host selects the storefront: `menu.sushinaa.qa` (and other non-`order.` hosts) is the **menu** surface; `order.sushinaa.qa/{branch}` is **pickup** ordering with basket, collection details, review, and confirmation. `/order` redirects into a branch. Payment return uses `/{branch}/order?paid=…` on the pickup host. English and Arabic layouts share the same flow. Locally or on `test-dev` without an `order.` subdomain, set `STOREFRONT_MODE=pickup`.
+`/` is the branch picker. Host selects the storefront: `order.sushinaa.qa/{branch}` is **pickup** (basket, collection details, review, confirmation, **Sadad**). `menu.sushinaa.qa` is **on-site** ordering for OXiPOS — not this car-collection flow. `/order` redirects into a branch. Payment return uses `/{branch}/order?paid=…` on the pickup host. English and Arabic layouts share the same flow. Locally or on `test-dev` without an `order.` subdomain, set `STOREFRONT_MODE=pickup`.
 
 The four branches, coordinates and hours share `src/branches/branches.ts` and `src/branches/hours.ts`. Phone entry uses +974 and eight national digits. Plates use Q/T/R plus 3–6 digits, preserving leading zeroes. New staff and collection-notice copy is translated into Arabic at the owner's request; final copy review remains parked.
 
@@ -12,7 +12,7 @@ Prices, availability and branch opening hours are checked server-side. Duplicate
 
 ## Staff orders
 
-**Pickup kitchen is the CMS.** Car-collection orders placed on the pickup storefront appear on authenticated `/admin` Orders — not on OXiPOS. OXiPOS is only for an in-restaurant order website that does **not** offer car-collection pickup (staff show the site; payment is a separate card machine). See [`docs/OXIPOS.md`](OXIPOS.md).
+**Pickup kitchen is the CMS.** Car-collection orders on `order.sushinaa.qa` appear on authenticated `/admin` Orders — not on OXiPOS. OXiPOS pulls only from `menu.sushinaa.qa` (on-site; pay at the branch machine). See [`docs/OXIPOS.md`](OXIPOS.md).
 
 The existing authenticated `/admin` shell has an Orders section with branch/status/date/search filters, 25-row pages, full customer contact for kitchen staff, the paper receipt and status history. Status writes use a conditional update and audit in one transaction; competing writes return `409 STALE_STATUS`. Pickup collection records payment in that same request. Cancellation uses fixed reason codes to keep personal information out of the audit label.
 

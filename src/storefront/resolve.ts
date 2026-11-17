@@ -22,8 +22,8 @@ function parseMode(raw: string | undefined): StorefrontMode | undefined {
 /**
  * Maps the request host (and optional STOREFRONT_MODE override) to a storefront.
  *
- * - `menu` — QR / display menu (view-only UI today)
- * - `pickup` — car-collection ordering into our CMS (and OXiPOS kitchen relay)
+ * - `menu` — on-site ordering (`menu.*`) → OXiPOS kitchen; not Sadad
+ * - `pickup` — car-collection on `order.*` → CMS kitchen + Sadad
  *
  * Host `order.*` → pickup. Anything else → menu.
  * Env override: STOREFRONT_MODE=pickup|menu (legacy aliases: order|browse).
