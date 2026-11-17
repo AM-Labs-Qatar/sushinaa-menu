@@ -35,7 +35,7 @@ test('orderDatabaseAllowed refuses live host aliases libsql still dials', () => 
   }
 });
 
-test('showAmLabsCredit is off only when the database URL is live', () => {
+test('showAmLabsCredit is always on', () => {
   const previousCms = process.env.CMS_DATABASE_URL;
   const previousTurso = process.env.TURSO_DATABASE_URL;
   try {
@@ -43,15 +43,8 @@ test('showAmLabsCredit is off only when the database URL is live', () => {
     delete process.env.TURSO_DATABASE_URL;
     assert.equal(showAmLabsCredit(), true);
 
-    process.env.CMS_DATABASE_URL = 'libsql://sushinaa-cms-dev-example.turso.io';
-    assert.equal(showAmLabsCredit(), true);
-
     process.env.CMS_DATABASE_URL = `libsql://${LIVE_DATABASE_HOST}`;
-    assert.equal(showAmLabsCredit(), false);
-
-    delete process.env.CMS_DATABASE_URL;
-    process.env.TURSO_DATABASE_URL = `libsql://${LIVE_DATABASE_HOST}`;
-    assert.equal(showAmLabsCredit(), false);
+    assert.equal(showAmLabsCredit(), true);
   } finally {
     if (previousCms === undefined) delete process.env.CMS_DATABASE_URL;
     else process.env.CMS_DATABASE_URL = previousCms;
