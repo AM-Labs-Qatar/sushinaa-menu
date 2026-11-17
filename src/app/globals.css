@@ -1665,6 +1665,28 @@ button {
 .order-tracker-number { flex-shrink: 0; }
 @media (max-width: 360px) { .order-tracker-number { display: none; } }
 
+/* Studio credit — test-dev / local only (see showAmLabsCredit). */
+.am-labs-credit {
+  position: fixed;
+  z-index: 30;
+  inset-inline-start: 12px;
+  bottom: max(10px, env(safe-area-inset-bottom, 0px));
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  color: #c4b49a;
+  text-decoration: none;
+  text-shadow: 0 1px 2px rgba(20, 17, 15, 0.55);
+  pointer-events: auto;
+}
+.am-labs-credit:hover {
+  color: #f3e4c4;
+}
+.am-labs-credit:focus-visible {
+  color: #f3e4c4;
+  outline: 1px solid rgba(243, 228, 196, 0.55);
+  outline-offset: 3px;
+}
+
 /* Approved portrait photography retains the whole composition on any screen. */
 .slide-portrait { background: #ded8d2; }
 .slide.slide-portrait .dish-photo {

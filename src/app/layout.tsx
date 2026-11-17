@@ -8,6 +8,7 @@ import { requestLang } from "@/i18n/request-lang";
 import { getMenu } from "@/cms/repository";
 import { publicMenu } from "@/cms/schema";
 import { MenuProvider } from "@/cms/context";
+import { AmLabsCredit } from "@/components/site/AmLabsCredit";
 import { isProductionDeployment } from "@/lib/deploy-env";
 import "./globals.css";
 
@@ -153,6 +154,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
               dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c") }}
             />
             {children}
+            <AmLabsCredit />
             <Analytics />
           </LocaleProvider>
         </MenuProvider>
