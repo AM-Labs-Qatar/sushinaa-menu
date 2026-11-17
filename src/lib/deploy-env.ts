@@ -49,3 +49,13 @@ export function touchesLiveDatabaseHost(url: string | undefined) {
   }
   return false;
 }
+
+/**
+ * Studio credit on test-dev / local / non-live DBs only.
+ * Hidden when the app is pointed at the live Turso host (restaurant production).
+ * test-dev uses VERCEL_ENV=production with the dev database — still shows the credit.
+ */
+export function showAmLabsCredit() {
+  const url = process.env.CMS_DATABASE_URL ?? process.env.TURSO_DATABASE_URL;
+  return !touchesLiveDatabaseHost(url);
+}
