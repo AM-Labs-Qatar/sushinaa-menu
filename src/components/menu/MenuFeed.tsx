@@ -13,6 +13,7 @@ import { CartSheet } from "../order/CartSheet";
 import { CategoryOverlay } from "./CategoryOverlay";
 import { DishDetailSheet } from "./DishDetailSheet";
 import { DishSlide } from "./DishSlide";
+import { AmLabsCredit } from "@/components/site/AmLabsCredit";
 
 // Ignore Arabic diacritics and common alef variants, plus case and punctuation.
 function normalizeSearch(value: string) {
@@ -355,6 +356,7 @@ function FeedInner() {
       <div className="sr-only" aria-live="polite">{search ? t.searchResults(dishes.length) : ""}</div>
       {detail ? <DishDetailSheet key={`${detail.id}-${diet}`} dish={detail} diet={diet} onClose={() => setDetail(null)} /> : null}
       <CartSheet open={open} onClose={() => setOpen(false)} />
+      {!sheetOpen ? <AmLabsCredit placement="branch" /> : null}
     </div>
   );
 }
