@@ -48,10 +48,6 @@ function FeedInner({ branch, onPickup, branchBar, orderTracking, inactive = fals
     const timer = window.setTimeout(() => setShowCategoryHint(false), 6500);
     return () => window.clearTimeout(timer);
   }, []);
-  // Parked under checkout (collection details / review / …) — never leave the ticket open.
-  useEffect(() => {
-    if (inactive) setOpen(false);
-  }, [inactive]);
   const searchButtonRef = useRef<HTMLButtonElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
   // How far the open field reaches: from the search button to the logo's edge.
@@ -479,7 +475,7 @@ function FeedInner({ branch, onPickup, branchBar, orderTracking, inactive = fals
       <div className="sr-only" aria-live="polite">{pickedCategory}</div>
       <div className="sr-only" aria-live="polite">{search ? t.searchResults(dishes.length) : ""}</div>
       {detail ? <DishDetailSheet key={`${detail.id}-${diet}`} dish={detail} diet={diet} ordering={Boolean(onPickup)} onClose={() => setDetail(null)} /> : null}
-      <CartSheet open={open} onClose={() => setOpen(false)} onPickup={onPickup ? () => { setOpen(false); onPickup(); } : undefined} />
+      <CartSheet open={open && !inactive} onClose={() => setOpen(false)} onPickup={onPickup ? () => { setOpen(false); onPickup(); } : undefined} />
     </div>
   );
 }
