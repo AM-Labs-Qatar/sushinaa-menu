@@ -7,6 +7,7 @@ import { configuredBranches, type Branch } from "@/branches/branches";
 import { accessibleName, branchStatus, qatarClock } from "@/branches/hours";
 import { useMenu } from "@/cms/context";
 import { LangButton, useLocale } from "@/i18n/locale";
+import { AmLabsCredit } from "@/components/site/AmLabsCredit";
 import { Nigiri } from "./Nigiri";
 import "./branch-picker.css";
 
@@ -129,6 +130,7 @@ export function BranchPicker() {
       <div ref={chopRef} className="bp-chop" aria-hidden="true">
         <div ref={sticksRef} className="bp-arm"><div className="bp-stick" /><div className="bp-stick" /></div>
       </div>
+      <AmLabsCredit placement="branch" />
     </main>
   );
 }

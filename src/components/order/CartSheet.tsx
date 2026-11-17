@@ -7,6 +7,7 @@ import { useLocale } from "@/i18n/locale";
 import { useMenu } from "@/cms/context";
 import { formatQar } from "@/lib/money";
 import { useSheetDismiss } from "@/lib/sheet-dismiss";
+import { AmLabsCredit } from "@/components/site/AmLabsCredit";
 
 type Props = {
   open: boolean;
@@ -161,9 +162,12 @@ export function CartSheet({ open, onClose, onPickup }: Props) {
               <Link href="/contact">{t.contact}</Link>
             </p>
 
-            <button type="button" className="clear-ticket" onClick={clear}>
-              {t.clear}
-            </button>
+            <div className="ticket-foot">
+              <AmLabsCredit placement="ticket" />
+              <button type="button" className="clear-ticket" onClick={clear}>
+                {t.clear}
+              </button>
+            </div>
           </>
         )}
       </div>

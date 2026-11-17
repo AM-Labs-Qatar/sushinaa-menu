@@ -1,13 +1,36 @@
-import { showAmLabsCredit } from "@/lib/deploy-env";
+"use client";
+
+import { createContext, useContext, type ReactNode } from "react";
 
 const AM_LABS_URL = "https://am-labs-xi.vercel.app";
 
-/** Dev / test-dev only — omitted on the live restaurant database. */
-export function AmLabsCredit() {
-  if (!showAmLabsCredit()) return null;
+const ShowAmLabsCredit = createContext(false);
+
+/** Server computes visibility; client trees only read the boolean. */
+export function AmLabsCreditProvider({
+  show,
+  children,
+}: {
+  show: boolean;
+  children: ReactNode;
+}) {
+  return (
+    <ShowAmLabsCredit.Provider value={show}>{children}</ShowAmLabsCredit.Provider>
+  );
+}
+
+function useShowAmLabsCredit() {
+  return useContext(ShowAmLabsCredit);
+}
+
+type Placement = "branch" | "ticket";
+
+/** Dev / test-dev only — omitted when the app is on the live restaurant database. */
+export function AmLabsCredit({ placement }: { placement: Placement }) {
+  if (!useShowAmLabsCredit()) return null;
   return (
     <a
-      className="am-labs-credit"
+      className={`am-labs-credit am-labs-credit--${placement}`}
       href={AM_LABS_URL}
       target="_blank"
       rel="noopener noreferrer"
