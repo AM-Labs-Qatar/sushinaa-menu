@@ -12,7 +12,14 @@ export function AmLabsCredit() {
       target="_blank"
       rel="noopener noreferrer"
     >
-      Powered by AM Labs
+      <img
+        className="am-labs-credit-mark"
+        src="/brand/am-labs-mark.svg"
+        alt=""
+        width={14}
+        height={14}
+      />
+      <span>Powered by AM Labs</span>
     </a>
   );
 }
