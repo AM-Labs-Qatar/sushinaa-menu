@@ -33,10 +33,6 @@ function sourceFromRow(row: Record<string, unknown>): PosExportSource | null {
     branchName: snapshot.branchName || String(row.branch_id || ""),
     customerName: String(row.customer_name || snapshot.customer?.name || ""),
     customerPhone: String(row.customer_phone || snapshot.customer?.phone || ""),
-    plate: String(row.car_plate || snapshot.customer?.plate || ""),
-    brand: String(snapshot.customer?.brand || ""),
-    car: String(row.car_model || snapshot.customer?.car || ""),
-    colour: String(row.car_colour || snapshot.customer?.colour || ""),
     instructions: String(row.instructions || snapshot.customer?.instructions || ""),
     lines: snapshot.lines,
   };
@@ -69,8 +65,7 @@ export async function listPendingOxiposOrders(
   await requireOrderDb();
   await ensurePosExportIds(branchId);
   const result = await db.execute({
-    sql: `SELECT pos_export_id, branch_id, snapshot, customer_name, customer_phone,
-            car_plate, car_colour, car_model, instructions
+    sql: `SELECT pos_export_id, branch_id, snapshot, customer_name, customer_phone, instructions
        FROM orders
       WHERE branch_id=? AND accepted_by_pos_at IS NULL AND pos_export_id IS NOT NULL
         AND ${POS_EXPORT_ELIGIBLE}
