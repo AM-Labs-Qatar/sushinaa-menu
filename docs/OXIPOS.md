@@ -38,7 +38,7 @@ Auth header on every request: `X-POS-API-Key: {OXIPOS_API_KEY}`. Invalid or miss
 
 `id` (integer `pos_export_id`), `customer_name`, `customer_phone`, `address_text`, `items[]` with `item_name`, `quantity`, `price_sold`, optional `product_id` (our `posSku`), `options_display`, `notes`.
 
-For in-restaurant tickets, `address_text` starts with **At restaurant** (branch name, optional instructions) — not a car-collection summary. Do not reuse pickup plate/car fields for this path. Pickup tickets (CMS only) use **Car collection** / thermal **CAR PICKUP**.
+POS is **restaurant / on-site only** — not car-collection pickup. `address_text` is **At restaurant** · branch · optional instructions. No plate or car fields. Car-collection tickets stay on the CMS (`CAR PICKUP`); they never enter this pull API.
 
 ## Config
 

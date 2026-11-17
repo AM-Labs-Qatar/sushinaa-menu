@@ -166,11 +166,15 @@ export function ticketModel(row: DbRow, edits: ResolvedEdit[] = []): TicketModel
     });
     groups.set('Items', group);
   }
-  const car = typeof row.car_plate === 'string' ? row.car_plate : '';
-  const brand = removed ? '' : carBrandName(snapshot.customer?.brand);
-  const vehicle = [row.car_colour, row.car_model].filter((part) => typeof part === 'string' && part).join(' · ');
-  const printCount = Number(row.print_count ?? 0);
   const surface = isOrderSurface(row.order_surface) ? row.order_surface : ORDER_SURFACE_PICKUP;
+  const restaurant = surface === 'restaurant';
+  // Car details are for CMS car-collection tickets only — not restaurant / POS.
+  const car = restaurant || typeof row.car_plate !== 'string' ? '' : row.car_plate;
+  const brand = restaurant || removed ? '' : carBrandName(snapshot.customer?.brand);
+  const vehicle = restaurant
+    ? ''
+    : [row.car_colour, row.car_model].filter((part) => typeof part === 'string' && part).join(' · ');
+  const printCount = Number(row.print_count ?? 0);
   return {
     branchName: snapshot.branchName || 'Sushinaa',
     orderNumber: formatOrderNumber(row.order_number == null ? '' : Number(row.order_number)),

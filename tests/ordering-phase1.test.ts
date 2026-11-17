@@ -532,6 +532,9 @@ test('ticket prints AT RESTAURANT for restaurant-surface orders', async () => {
     car_plate: 'Q123456', car_colour: 'silver', car_model: 'test car',
   });
   assert.equal(model.fulfilment, 'AT RESTAURANT');
+  assert.equal(model.car, '');
+  assert.equal(model.brand, '');
+  assert.equal(model.vehicle, '');
 });
 
 test('polling with a cursor for a deleted order returns the first page and auto-print rows', async () => {

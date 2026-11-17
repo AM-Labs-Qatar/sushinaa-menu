@@ -35,25 +35,20 @@ const sampleLines = [
   },
 ];
 
-test("toOxiposOrder maps car collection and SKU with exact field names", () => {
+test("toOxiposOrder maps At restaurant and SKU with exact field names", () => {
   const order = toOxiposOrder({
     posExportId: 42,
     branchName: "Down Town",
     customerName: "Ali",
     customerPhone: "97455551234",
-    plate: "Q123",
-    brand: "toyota",
-    car: "Camry",
-    colour: "white",
-    instructions: "gate 2",
-    orderSurface: ORDER_SURFACE_PICKUP,
+    instructions: "window seat",
     lines: sampleLines,
   });
   assert.equal(order.id, 42);
   assert.equal(order.customer_name, "Ali");
   assert.equal(order.customer_phone, "+97455551234");
-  assert.match(order.address_text!, /Car collection/);
-  assert.match(order.address_text!, /Plate Q123/);
+  assert.equal(order.address_text, "At restaurant · Down Town · window seat");
+  assert.doesNotMatch(order.address_text!, /Car collection|Plate|Camry/);
   assert.equal(order.items.length, 1);
   assert.deepEqual(order.items[0], {
     item_name: "California Roll",
@@ -64,28 +59,6 @@ test("toOxiposOrder maps car collection and SKU with exact field names", () => {
     notes: "No mayo",
   });
   assert.equal(JSON.parse(JSON.stringify(order)) instanceof Array, false);
-});
-
-test("toOxiposOrder restaurant address is At restaurant without car fields", () => {
-  const order = toOxiposOrder({
-    posExportId: 7,
-    branchName: "Down Town",
-    customerName: "Sara",
-    customerPhone: "97455559876",
-    plate: "Q999",
-    brand: "toyota",
-    car: "Camry",
-    colour: "black",
-    instructions: "window seat",
-    orderSurface: ORDER_SURFACE_RESTAURANT,
-    lines: sampleLines,
-  });
-  assert.match(order.address_text!, /^At restaurant/);
-  assert.match(order.address_text!, /Down Town/);
-  assert.match(order.address_text!, /window seat/);
-  assert.doesNotMatch(order.address_text!, /Car collection/);
-  assert.doesNotMatch(order.address_text!, /Plate/);
-  assert.doesNotMatch(order.address_text!, /Camry/);
 });
 
 let dir: string;
