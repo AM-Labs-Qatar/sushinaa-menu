@@ -48,6 +48,10 @@ function FeedInner({ branch, onPickup, branchBar, orderTracking, inactive = fals
     const timer = window.setTimeout(() => setShowCategoryHint(false), 6500);
     return () => window.clearTimeout(timer);
   }, []);
+  // Parked under checkout (collection details / review / …) — never leave the ticket open.
+  useEffect(() => {
+    if (inactive) setOpen(false);
+  }, [inactive]);
   const searchButtonRef = useRef<HTMLButtonElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
   // How far the open field reaches: from the search button to the logo's edge.
