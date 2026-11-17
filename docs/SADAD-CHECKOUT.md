@@ -94,7 +94,7 @@ Admin-only **Payments** tab: read-only ledger of online pickup pays (`sadad` / `
 | --- | --- |
 | Local / CI | `mock` (or unset) |
 | `test-dev` | Env **slots** already on Vercel Production: `SADAD_PUBLIC_ORIGIN` set; paste `SADAD_SECRET_KEY` + `SADAD_MERCHANT_ID`; flip `PAYMENT_PROVIDER` from `pay_at_pickup` → `sadad`; register callback/webhook URLs with Sadad; redeploy |
-| Production (`sushinaa-menu`) | Stay **pay_at_pickup** until sandbox sign-off; then live key + cutover. Do not push/merge to `main` from agents. PRs → `dev`. |
+| Production (`sushinaa-menu`) | Live Sadad binds to **`order.sushinaa.qa` only** (`SADAD_PUBLIC_ORIGIN=https://order.sushinaa.qa`). Stay **pay_at_pickup** until sandbox sign-off; then live key + cutover. `menu.sushinaa.qa` is on-site/OXiPOS — never Sadad. Do not push/merge to `main` from agents. PRs → `dev`. |
 
 Migration: `db/migrations/0007_payment_events.sql` (+ schema bootstrap). Apply only via the project’s migration rules — never against live casually.
 

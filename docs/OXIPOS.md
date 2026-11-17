@@ -6,14 +6,14 @@ Two different customer paths. Do not mix them.
 
 | Path | Who | Payment | Kitchen |
 | --- | --- | --- | --- |
-| **Car-collection pickup** | Customer orders from home / car on the **pickup** storefront (`order.*` or `STOREFRONT_MODE=pickup`) | Our checkout (Sadad / mock / pay-at-pickup) | **Our CMS** live Orders — not OXiPOS |
-| **At the restaurant** | Guest is already in branch; staff show an **order website that does not offer car-collection pickup** | Separate card machine / counter — not our online pickup checkout | **OXiPOS** pulls from that non-pickup server |
+| **Car-collection pickup** | Customer orders from home / car on **`order.sushinaa.qa`** (`order.*` or `STOREFRONT_MODE=pickup`) | Our checkout (**live Sadad** / pay-at-pickup / mock) | **Our CMS** live Orders — not OXiPOS |
+| **On-site / at the restaurant** | Guest is already in branch on **`menu.sushinaa.qa`** (non-pickup storefront) | Branch card machine / counter — **not** Sadad | **OXiPOS** pulls from `menu.*` |
 
-**OXiPOS must only call a server that does not expose the pickup (car-collection) option.** Pickup orders stay in the CMS. Do not point the POS pull URL at the pickup storefront, do not feed CMS pickup tickets into OXiPOS, and do not let POS acceptance drive CMS kitchen status.
+**OXiPOS must only call the menu host** (`menu.sushinaa.qa`) — never `order.*`. Pickup orders stay in the CMS. Do not feed CMS pickup tickets into OXiPOS, and do not let POS acceptance drive CMS kitchen status.
 
 That boundary is intentional product architecture, not a temporary quirk.
 
-**Current production status:** OXiPOS remains **backend-only**. Leave `OXIPOS_*` unset on `sushinaa-menu` / `menu.sushinaa.qa` / `order.sushinaa.qa` until a separate non-pickup ordering host is cut over.
+**Current production status:** leave `OXIPOS_*` unset on Production until the on-site (`menu.*`) cutover. Sadad live keys bind to `order.sushinaa.qa` only.
 
 ## What this API is
 
@@ -43,7 +43,7 @@ For in-restaurant tickets, `address_text` is not a car-collection summary. Do no
 | `OXIPOS_API_KEY` | Shared secret. Pull API refuses all callers when unset. |
 | `OXIPOS_SHOP_IDS` | JSON map of branch slug → shop id, e.g. `{"down-town":"101"}`. |
 
-Give the restaurant: base URL of the **non-pickup** ordering server (`https://…/api/pos/orders/`), shop ids, API key, and the POS SKU CSV from **Admin → Menu → Export POS SKUs** (`GET /api/admin/menu/pos-sku-export`). They fill the blank `oxiposProductId` column and configure `weborder.map.{posSku}={oxiposProductId}` on the POS.
+Give the restaurant: base URL **`https://menu.sushinaa.qa/api/pos/orders/`** (never `order.*`), shop ids, API key, and the POS SKU CSV from **Admin → Menu → Export POS SKUs** (`GET /api/admin/menu/pos-sku-export`). They fill the blank `oxiposProductId` column and configure `weborder.map.{posSku}={oxiposProductId}` on the POS.
 
 Our `posSku` values are assigned automatically as `SU-{DISH_ID}` in uppercase (e.g. dish `sushinaa-burger` → `SU-SUSHINAA-BURGER`). Stable, unique, and safe for POS map keys.
 

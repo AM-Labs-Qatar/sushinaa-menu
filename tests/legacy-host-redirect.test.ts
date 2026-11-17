@@ -20,3 +20,26 @@ test("menu and order hosts are not redirected", () => {
   assert.equal(proxy(request("order.sushinaa.qa")).headers.get("location"), null);
   assert.equal(proxy(request("order.sushinaa.qa")).status, 200);
 });
+
+test("admin host serves CMS at / and /login via rewrite", () => {
+  const home = proxy(request("admin.sushinaa.qa", "/"));
+  assert.equal(home.status, 200);
+  assert.equal(home.headers.get("x-middleware-rewrite"), "https://example.invalid/admin");
+  assert.equal(home.headers.get("location"), null);
+
+  const login = proxy(request("admin.sushinaa.qa", "/login"));
+  assert.equal(login.status, 200);
+  assert.equal(login.headers.get("x-middleware-rewrite"), "https://example.invalid/admin/login");
+});
+
+test("admin host canonicalizes /admin URLs to the root paths", () => {
+  const root = proxy(request("admin.sushinaa.qa", "/admin"));
+  assert.equal(root.status, 308);
+  assert.equal(new URL(root.headers.get("location")!).pathname, "/");
+
+  const login = proxy(request("admin.sushinaa.qa", "/admin/login?next=1"));
+  assert.equal(login.status, 308);
+  const loc = new URL(login.headers.get("location")!);
+  assert.equal(loc.pathname, "/login");
+  assert.equal(loc.search, "?next=1");
+});
