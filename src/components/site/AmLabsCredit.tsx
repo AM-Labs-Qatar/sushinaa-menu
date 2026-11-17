@@ -1,6 +1,6 @@
 import { showAmLabsCredit } from "@/lib/deploy-env";
 
-const AM_LABS_URL = "https://amlabs.com";
+const AM_LABS_URL = "https://am-labs-xi.vercel.app";
 
 /** Dev / test-dev only — omitted on the live restaurant database. */
 export function AmLabsCredit() {
