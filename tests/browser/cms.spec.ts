@@ -787,10 +787,17 @@ test("search is closed from the first frame and its first open starts on the nex
     await page.context().addCookies([{ name: "sushina-lang", value: lang, url: baseURL! }]);
     await page.goto("/down-town");
     await expect(toggle).toHaveAttribute("aria-expanded", "false");
-    await page.waitForTimeout(800);
+    // Wait for the init-script probe to catch the field's first laid-out frame
+    // (CI can hydrate past the fixed 800ms window after a Next bump).
+    await expect
+      .poll(
+        async () =>
+          page.evaluate(() => (window as unknown as { searchProbe: SearchProbe }).searchProbe.first),
+        { timeout: 5_000 },
+      )
+      .toMatch(/^inset\(.*calc\(100% - 44px\).* \| chrome-header \| 0$/);
     const load = await page.evaluate(() => (window as unknown as { searchProbe: SearchProbe }).searchProbe);
     expect(load.moved, lang).toEqual([]);
-    expect(load.first, lang).toMatch(/^inset\(.*calc\(100% - 44px\).* \| chrome-header \| 0$/);
     const first = await open();
     await page.keyboard.press("Escape");
     await expect(toggle).toHaveAttribute("aria-expanded", "false");
