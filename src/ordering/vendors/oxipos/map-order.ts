@@ -1,4 +1,9 @@
 import type { OrderSnapshot } from "@/ordering/checkout/quote";
+import {
+  kitchenAddressLead,
+  type OrderSurface,
+  ORDER_SURFACE_PICKUP,
+} from "@/ordering/surface";
 
 /** OXiPOS pending-order item (exact field names from their guide). */
 export type OxiposItem = {
@@ -30,6 +35,8 @@ export type PosExportSource = {
   colour: string;
   instructions: string;
   lines: OrderSnapshot["lines"];
+  /** Kitchen surface — restaurant tickets must not use car-collection copy. */
+  orderSurface: OrderSurface;
 };
 
 function phoneE164(phone: string): string {
@@ -53,8 +60,17 @@ function optionsDisplay(selection: OrderSnapshot["lines"][number]["selection"]):
 }
 
 function addressText(source: PosExportSource): string {
+  const surface = source.orderSurface ?? ORDER_SURFACE_PICKUP;
+  if (surface === "restaurant") {
+    const bits = [
+      kitchenAddressLead(surface),
+      source.branchName,
+      source.instructions,
+    ].filter(Boolean);
+    return bits.join(" · ");
+  }
   const bits = [
-    "Car collection",
+    kitchenAddressLead(surface),
     source.branchName,
     source.plate ? `Plate ${source.plate}` : "",
     [source.brand, source.car, source.colour].filter(Boolean).join(" "),

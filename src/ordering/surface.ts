@@ -36,3 +36,19 @@ export const ORDER_SURFACE_POS_SQL = `(order_surface = 'restaurant')`;
 export function isOrderSurface(value: unknown): value is OrderSurface {
   return value === "pickup" || value === "restaurant";
 }
+
+/**
+ * Kitchen ticket fulfilment line (thermal print / staff ticket).
+ * Pickup = car collection; restaurant = guest already in branch.
+ */
+export function kitchenFulfilmentLabel(surface: OrderSurface): string {
+  return surface === ORDER_SURFACE_RESTAURANT ? "AT RESTAURANT" : "CAR PICKUP";
+}
+
+/**
+ * Lead phrase for OXiPOS `address_text` (and similar kitchen copy).
+ * Restaurant tickets must not reuse the car-collection summary.
+ */
+export function kitchenAddressLead(surface: OrderSurface): string {
+  return surface === ORDER_SURFACE_RESTAURANT ? "At restaurant" : "Car collection";
+}

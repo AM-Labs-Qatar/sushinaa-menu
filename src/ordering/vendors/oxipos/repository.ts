@@ -2,7 +2,11 @@ import { initDb, db, databaseUrl } from "@/cms/db";
 import { orderDatabaseAllowed, OrderingUnavailable } from "@/ordering/guard";
 import type { BranchId } from "@/branches/branches";
 import type { OrderSnapshot } from "@/ordering/checkout/quote";
-import { ORDER_SURFACE_POS_SQL } from "@/ordering/surface";
+import {
+  isOrderSurface,
+  ORDER_SURFACE_POS_SQL,
+  ORDER_SURFACE_RESTAURANT,
+} from "@/ordering/surface";
 import { toOxiposOrder, type OxiposOrder, type PosExportSource } from "./map-order";
 
 /**
@@ -28,6 +32,10 @@ function sourceFromRow(row: Record<string, unknown>): PosExportSource | null {
     return null;
   }
   if (!Array.isArray(snapshot.lines) || !snapshot.lines.length) return null;
+  const surfaceRaw = row.order_surface;
+  const orderSurface = isOrderSurface(surfaceRaw)
+    ? surfaceRaw
+    : ORDER_SURFACE_RESTAURANT;
   return {
     posExportId,
     branchName: snapshot.branchName || String(row.branch_id || ""),
@@ -39,6 +47,7 @@ function sourceFromRow(row: Record<string, unknown>): PosExportSource | null {
     colour: String(row.car_colour || snapshot.customer?.colour || ""),
     instructions: String(row.instructions || snapshot.customer?.instructions || ""),
     lines: snapshot.lines,
+    orderSurface,
   };
 }
 
@@ -69,7 +78,7 @@ export async function listPendingOxiposOrders(
   await requireOrderDb();
   await ensurePosExportIds(branchId);
   const result = await db.execute({
-    sql: `SELECT pos_export_id, branch_id, snapshot, customer_name, customer_phone,
+    sql: `SELECT pos_export_id, branch_id, order_surface, snapshot, customer_name, customer_phone,
             car_plate, car_colour, car_model, instructions
        FROM orders
       WHERE branch_id=? AND accepted_by_pos_at IS NULL AND pos_export_id IS NOT NULL

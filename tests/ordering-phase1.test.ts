@@ -515,12 +515,23 @@ test('ticket prints CAR PICKUP with the car details', async () => {
   const order = await place();
   const model = ticketModel({
     ...await row(order.id),
+    order_surface: 'pickup',
     car_plate: 'Q123456', car_colour: 'silver', car_model: 'test car',
   });
   assert.equal(model.fulfilment, 'CAR PICKUP');
   assert.equal(model.car, 'Q123456');
   assert.equal(model.brand, 'Toyota');
   assert.equal(model.vehicle, 'silver · test car');
+});
+
+test('ticket prints AT RESTAURANT for restaurant-surface orders', async () => {
+  const order = await place();
+  const model = ticketModel({
+    ...await row(order.id),
+    order_surface: 'restaurant',
+    car_plate: 'Q123456', car_colour: 'silver', car_model: 'test car',
+  });
+  assert.equal(model.fulfilment, 'AT RESTAURANT');
 });
 
 test('polling with a cursor for a deleted order returns the first page and auto-print rows', async () => {

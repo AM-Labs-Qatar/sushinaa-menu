@@ -21,7 +21,7 @@ DNS for `sushinaa.qa` is on Vercel (registrar may still be QHOST). Attach `menu`
 
 ## OXiPOS (on-site / menu host)
 
-See [`docs/OXIPOS.md`](OXIPOS.md). **Separation:** car-collection pickup stays in the **CMS**. On-site ordering on `menu.sushinaa.qa` is the OXiPOS pull target (pay at the branch card machine / counter — not Sadad). Code and host gates are ready; leave `OXIPOS_*` unset on Production until the restaurant maps SKUs and points POS at `https://menu.sushinaa.qa/api/pos/orders/`. Flip-on is env + POS config only — never put `OXIPOS_*` on the pickup path or point POS at `order.*`.
+See [`docs/OXIPOS.md`](OXIPOS.md). **Separation:** car-collection pickup stays in the **CMS**. On-site ordering on `menu.sushinaa.qa` is the OXiPOS pull target (pay at the branch card machine / counter — not Sadad). Code and host gates are ready; leave `OXIPOS_*` unset on Production until the restaurant maps SKUs and points POS at `https://menu.sushinaa.qa/api/pos/orders` (trailing slash also accepted). Flip-on is env + POS config only — never put `OXIPOS_*` on the pickup path or point POS at `order.*`.
 
 ## Storefronts (menu vs pickup)
 

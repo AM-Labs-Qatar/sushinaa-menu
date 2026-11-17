@@ -8,6 +8,11 @@ import { selectionLabel } from '@/ordering/price';
 import { nationalPhone } from '@/ordering/checkout/validation';
 import type { Selection } from '@/catalog/types';
 import { applyEdits, linesFromSnapshot, type ResolvedEdit } from '@/ordering/edits';
+import {
+  isOrderSurface,
+  kitchenFulfilmentLabel,
+  ORDER_SURFACE_PICKUP,
+} from '@/ordering/surface';
 
 const ticketCopy = { pcs: 'pcs', spicy: 'Spicy', regular: 'Regular', dip: 'Dip' } as Copy;
 const money = { currencyEn: 'QAR', currencyAr: 'ر.ق' };
@@ -165,12 +170,13 @@ export function ticketModel(row: DbRow, edits: ResolvedEdit[] = []): TicketModel
   const brand = removed ? '' : carBrandName(snapshot.customer?.brand);
   const vehicle = [row.car_colour, row.car_model].filter((part) => typeof part === 'string' && part).join(' · ');
   const printCount = Number(row.print_count ?? 0);
+  const surface = isOrderSurface(row.order_surface) ? row.order_surface : ORDER_SURFACE_PICKUP;
   return {
     branchName: snapshot.branchName || 'Sushinaa',
     orderNumber: formatOrderNumber(row.order_number == null ? '' : Number(row.order_number)),
     id: String(row.id),
     placed: qatarTime(String(row.created_at)),
-    fulfilment: 'CAR PICKUP',
+    fulfilment: kitchenFulfilmentLabel(surface),
     car,
     brand,
     vehicle,
