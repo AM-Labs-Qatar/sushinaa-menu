@@ -1,4 +1,8 @@
 import type { OrderSnapshot } from "@/ordering/checkout/quote";
+import {
+  kitchenAddressLead,
+  ORDER_SURFACE_RESTAURANT,
+} from "@/ordering/surface";
 
 /** OXiPOS pending-order item (exact field names from their guide). */
 export type OxiposItem = {
@@ -19,15 +23,15 @@ export type OxiposOrder = {
   items: OxiposItem[];
 };
 
+/**
+ * POS export is restaurant-surface only (never car-collection pickup).
+ * No plate / car fields — payment and car pickup stay off this path.
+ */
 export type PosExportSource = {
   posExportId: number;
   branchName: string;
   customerName: string;
   customerPhone: string;
-  plate: string;
-  brand: string;
-  car: string;
-  colour: string;
   instructions: string;
   lines: OrderSnapshot["lines"];
 };
@@ -52,15 +56,15 @@ function optionsDisplay(selection: OrderSnapshot["lines"][number]["selection"]):
   return parts.join("; ");
 }
 
+/** In-restaurant ticket line — never car-collection copy. */
 function addressText(source: PosExportSource): string {
-  const bits = [
-    "Car collection",
+  return [
+    kitchenAddressLead(ORDER_SURFACE_RESTAURANT),
     source.branchName,
-    source.plate ? `Plate ${source.plate}` : "",
-    [source.brand, source.car, source.colour].filter(Boolean).join(" "),
     source.instructions,
-  ].filter(Boolean);
-  return bits.join(" · ");
+  ]
+    .filter(Boolean)
+    .join(" · ");
 }
 
 /** Maps our order row into the OXiPOS JSON object. Pure; no I/O. */

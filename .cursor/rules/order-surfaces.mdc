@@ -10,6 +10,6 @@ Two paths. Keep them separate.
 1. **Car-collection pickup** — `order.sushinaa.qa` (`order.*` / `STOREFRONT_MODE=pickup`). Payment = **Sadad** (or pay-at-pickup until cutover). Kitchen = **CMS live Orders**. Never export these tickets to OXiPOS.
 2. **On-site / at the restaurant** — `menu.sushinaa.qa` (non-pickup). Payment = branch card machine / counter (**not** Sadad). Kitchen relay = **OXiPOS** pull on the menu host only.
 
-OXiPOS must only call `menu.*`. Do not point POS at `order.*`, do not feed pickup CMS orders into `/api/pos/orders`, and do not let POS acceptance drive CMS pickup kitchen status.
+OXiPOS must only call `menu.*` (`/api/pos/orders`, `/api/pos/orders/{id}/accepted` — trailing slash also accepted). Do not point POS at `order.*`, do not feed pickup CMS orders into `/api/pos/orders`, and do not let POS acceptance drive CMS pickup kitchen status.
 
 Canonical detail: `docs/OXIPOS.md`, `docs/CAR-COLLECTION.md`, `docs/environments.md`.

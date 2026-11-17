@@ -23,10 +23,14 @@ Depend only on this document and the vendor guide field names. Do not encode pol
 
 ## Endpoints we expose
 
-| Method | Path | Notes |
+Canonical paths have **no** trailing slash (App Router). Trailing-slash forms are accepted via an internal rewrite — never a 308 — so OXiPOS POSTs keep their body.
+
+| Method | Canonical path | Also accepted |
 | --- | --- | --- |
-| `GET` | `/api/pos/orders?shop_id={shop_id}` | Root JSON **array** of pending orders. Empty list is `[]`. |
-| `POST` | `/api/pos/orders/{pos_export_id}/accepted/` | Body `{}`. Marks the order accepted; it must not appear in GET again. |
+| `GET` | `/api/pos/orders?shop_id={shop_id}` | `/api/pos/orders/?shop_id={shop_id}` |
+| `POST` | `/api/pos/orders/{pos_export_id}/accepted` | `/api/pos/orders/{pos_export_id}/accepted/` |
+
+`POST` body `{}`. Marks the order accepted; it must not appear in `GET` again. Response root for `GET` is a JSON **array** (empty list is `[]`).
 
 Auth header on every request: `X-POS-API-Key: {OXIPOS_API_KEY}`. Invalid or missing key → `401`.
 
@@ -34,7 +38,7 @@ Auth header on every request: `X-POS-API-Key: {OXIPOS_API_KEY}`. Invalid or miss
 
 `id` (integer `pos_export_id`), `customer_name`, `customer_phone`, `address_text`, `items[]` with `item_name`, `quantity`, `price_sold`, optional `product_id` (our `posSku`), `options_display`, `notes`.
 
-For in-restaurant tickets, `address_text` is not a car-collection summary. Do not reuse pickup car fields for this path.
+POS is **restaurant / on-site only** — not car-collection pickup. `address_text` is **At restaurant** · branch · optional instructions. No plate or car fields. Car-collection tickets stay on the CMS (`CAR PICKUP`); they never enter this pull API.
 
 ## Config
 
@@ -43,7 +47,7 @@ For in-restaurant tickets, `address_text` is not a car-collection summary. Do no
 | `OXIPOS_API_KEY` | Shared secret. Pull API refuses all callers when unset. |
 | `OXIPOS_SHOP_IDS` | JSON map of branch slug → shop id, e.g. `{"down-town":"101"}`. |
 
-Give the restaurant: base URL **`https://menu.sushinaa.qa/api/pos/orders/`** (never `order.*`), shop ids, API key, and the POS SKU CSV from **Admin → Menu → Export POS SKUs** (`GET /api/admin/menu/pos-sku-export`). They fill the blank `oxiposProductId` column and configure `weborder.map.{posSku}={oxiposProductId}` on the POS.
+Give the restaurant: base URL **`https://menu.sushinaa.qa/api/pos/orders`** (never `order.*`; trailing slash still works), shop ids, API key, and the POS SKU CSV from **Admin → Menu → Export POS SKUs** (`GET /api/admin/menu/pos-sku-export`). They fill the blank `oxiposProductId` column and configure `weborder.map.{posSku}={oxiposProductId}` on the POS. Acceptance: `POST https://menu.sushinaa.qa/api/pos/orders/{id}/accepted`.
 
 Our `posSku` values are assigned automatically as `SU-{DISH_ID}` in uppercase (e.g. dish `sushinaa-burger` → `SU-SUSHINAA-BURGER`). Stable, unique, and safe for POS map keys.
 

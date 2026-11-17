@@ -14,43 +14,41 @@ import {
 } from "../src/ordering/surface";
 import { toOxiposOrder } from "../src/ordering/vendors/oxipos/map-order";
 
-test("toOxiposOrder maps car collection and SKU with exact field names", () => {
+const sampleLines = [
+  {
+    dishId: "d1",
+    name: "California Roll",
+    nameAr: "كاليفورنيا",
+    kind: { type: "simple" as const, priceQar: 25 },
+    freeDips: undefined,
+    extras: undefined,
+    categoryId: "c",
+    categoryName: "Rolls",
+    categoryNameAr: "",
+    categoryOrder: 0,
+    selection: { size: "8" },
+    quantity: 2,
+    note: "No mayo",
+    unitMinor: 2500,
+    totalMinor: 5000,
+    posSku: "SKU-CALI",
+  },
+];
+
+test("toOxiposOrder maps At restaurant and SKU with exact field names", () => {
   const order = toOxiposOrder({
     posExportId: 42,
     branchName: "Down Town",
     customerName: "Ali",
     customerPhone: "97455551234",
-    plate: "Q123",
-    brand: "toyota",
-    car: "Camry",
-    colour: "white",
-    instructions: "gate 2",
-    lines: [
-      {
-        dishId: "d1",
-        name: "California Roll",
-        nameAr: "كاليفورنيا",
-        kind: { type: "simple", priceQar: 25 },
-        freeDips: undefined,
-        extras: undefined,
-        categoryId: "c",
-        categoryName: "Rolls",
-        categoryNameAr: "",
-        categoryOrder: 0,
-        selection: { size: "8" },
-        quantity: 2,
-        note: "No mayo",
-        unitMinor: 2500,
-        totalMinor: 5000,
-        posSku: "SKU-CALI",
-      },
-    ],
+    instructions: "window seat",
+    lines: sampleLines,
   });
   assert.equal(order.id, 42);
   assert.equal(order.customer_name, "Ali");
   assert.equal(order.customer_phone, "+97455551234");
-  assert.match(order.address_text!, /Car collection/);
-  assert.match(order.address_text!, /Plate Q123/);
+  assert.equal(order.address_text, "At restaurant · Down Town · window seat");
+  assert.doesNotMatch(order.address_text!, /Car collection|Plate|Camry/);
   assert.equal(order.items.length, 1);
   assert.deepEqual(order.items[0], {
     item_name: "California Roll",
@@ -209,6 +207,9 @@ test("GET pending list is a root array; accept removes the restaurant order", as
   assert.deepEqual(await emptyShop.json(), []);
 
   const posId = mine[0].id as number;
+  assert.match(mine[0].address_text ?? "", /^At restaurant/);
+  assert.doesNotMatch(mine[0].address_text ?? "", /Car collection/);
+
   const accepted = await acceptRoute.POST(
     new Request(
       `http://menu.localhost/api/pos/orders/${posId}/accepted/`,
@@ -238,6 +239,50 @@ test("GET pending list is a root array; accept removes the restaurant order", as
     { params: Promise.resolve({ id: String(posId) }) },
   );
   assert.equal(idempotent.status, 200);
+});
+
+test("POST accepted with and without trailing slash returns the same result", async () => {
+  const listRoute = await import("../src/app/api/pos/orders/route");
+  const acceptRoute = await import(
+    "../src/app/api/pos/orders/[id]/accepted/route"
+  );
+  const { rewritePosTrailingSlash } = await import("../src/proxy");
+
+  await placeOrder("pay_at_pickup", ORDER_SURFACE_RESTAURANT, "Slash Guest", "Q777");
+  const headers = { "X-POS-API-Key": "test-pos-key" };
+  const listed = await listRoute.GET(
+    new Request("http://menu.localhost/api/pos/orders?shop_id=101", { headers }),
+  );
+  const mine = (await listed.json()).filter(
+    (o: { customer_name: string }) => o.customer_name === "Slash Guest",
+  );
+  assert.equal(mine.length, 1);
+  const posId = mine[0].id as number;
+
+  const withSlash = `/api/pos/orders/${posId}/accepted/`;
+  const withoutSlash = `/api/pos/orders/${posId}/accepted`;
+  assert.equal(rewritePosTrailingSlash(withSlash), withoutSlash);
+  assert.equal(rewritePosTrailingSlash(withoutSlash), null);
+
+  const first = await acceptRoute.POST(
+    new Request(`http://menu.localhost${withSlash}`, {
+      method: "POST",
+      headers,
+      body: "{}",
+    }),
+    { params: Promise.resolve({ id: String(posId) }) },
+  );
+  const second = await acceptRoute.POST(
+    new Request(`http://menu.localhost${withoutSlash}`, {
+      method: "POST",
+      headers,
+      body: "{}",
+    }),
+    { params: Promise.resolve({ id: String(posId) }) },
+  );
+  assert.equal(first.status, 200);
+  assert.equal(second.status, 200);
+  assert.equal(first.status, second.status);
 });
 
 test("unpaid restaurant orders still pull for POS (payment is out of band)", async () => {
