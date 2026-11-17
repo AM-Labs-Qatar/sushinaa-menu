@@ -14,12 +14,14 @@ Structure and coupling follow `docs/engineering/coding-principles.md` (and `.cur
 
 ## Sushinaa dev and production
 
-Read `docs/environments.md` before touching a database, an env var, or a deployment.
+Read `docs/environments.md` and `docs/data-kinds.md` before touching a database, an env var, or a deployment.
 
-Production menu is https://menu.sushinaa.qa and pickup is https://order.sushinaa.qa (`main`, project `sushinaa-menu`, live Turso database). https://sushinaa-menu.vercel.app redirects to the menu host. Do not write to the live database, repoint it, redeploy it, or migrate it casually. Do not push or merge to `main` without an explicit release.
+Production hosts (`main`, project `sushinaa-menu`, live Turso): **https://menu.sushinaa.qa** = on-site → OXiPOS (env ready, connect when restaurant is); **https://order.sushinaa.qa** = pickup → CMS + live Sadad; **https://admin.sushinaa.qa** = CMS (root, not `/admin`). https://sushinaa-menu.vercel.app redirects to the menu host. Do not write to the live database, repoint it, redeploy it, or migrate it casually. Do not push or merge to `main` without an explicit release.
 
-Dev is https://test-dev-abu-iqbal-projects.vercel.app (project `test-dev`, dev Turso database). Local work uses `data/menu.db` or that dev database. Pull requests go into `dev`.
+Dev is https://test-dev-abu-iqbal-projects.vercel.app (project `test-dev`, **dev** Turso only — permanent playground). Never attach `*.sushinaa.qa` or live Sadad/Turso to `test-dev`. Local work uses `data/menu.db` or that dev database. Pull requests go into `dev`.
 
-Sadad / online pickup payment: read and update `docs/SADAD-CHECKOUT.md` when changing payment checkout, gateway, or ledger code. Live ordering needs `ORDERING_LIVE_ENABLED=1` on production.
+**Data kinds:** catalog (`menu`/`media`) may be promoted; transactions (orders, payments, sessions, **coupons**, …) never; secrets stay in Vercel. Day-to-day menu edits are live CMS; schema/code ships `dev` → `main`. See `docs/data-kinds.md`.
 
-**Order surfaces:** car-collection pickup → CMS live Orders. OXiPOS is backend-only for now (leave `OXIPOS_*` unset on production). Never mix those kitchen feeds. See `docs/OXIPOS.md` and `.cursor/rules/order-surfaces.mdc`.
+Sadad / online pickup payment (order.* only): read and update `docs/SADAD-CHECKOUT.md` when changing payment checkout, gateway, or ledger code. Live ordering needs `ORDERING_LIVE_ENABLED=1` on production until that cutover rail is retired.
+
+**Order surfaces:** pickup (`order.*`) → CMS live Orders + Sadad. On-site (`menu.*`) → OXiPOS (leave `OXIPOS_*` unset until that cutover). Never mix those kitchen feeds. See `docs/OXIPOS.md` and `.cursor/rules/order-surfaces.mdc`.

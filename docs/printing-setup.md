@@ -26,7 +26,7 @@ macOS:
 "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" --kiosk-printing --user-data-dir="$HOME/SushinaaPrint" https://test-dev-abu-iqbal-projects.vercel.app/admin
 ```
 
-That address is the Sushinaa dev website. After an approved release, use the live site's /admin instead.
+That address is the Sushinaa dev website. After an approved release, use https://admin.sushinaa.qa for live CMS.
 
 The separate profile makes the flag apply even when Chrome is already open.
 
