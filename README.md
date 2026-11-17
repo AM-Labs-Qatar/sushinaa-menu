@@ -53,7 +53,7 @@ Local development defaults to the SQLite file `data/menu.db`. Do not commit it. 
 
 `CMS_ENV_GUARD=enforce` refuses to start when a deployment is pointed at the wrong database. `report` only logs. Dev is on `enforce`. The running production site has not been rebuilt with that yet. Outside production on the `sushinaa-menu` project, the site sends `noindex`.
 
-`npm run db:copy-to-dev` refreshes the dev database from a read-only view of `menu` and `media` only. `npm run db:copy-dev-menu-to-live` promotes those rows onto live during an approved cutover (`CONFIRM_LIVE_MENU_COPY=sushinaa-cms`). `npm run db:migrate` is for disposable databases. Do not run it against Turso.
+`npm run db:copy-to-dev` refreshes the dev database from a read-only view of `menu` and `media` only. `npm run db:copy-dev-menu-to-live` promotes those rows onto live during an approved cutover (`CONFIRM_LIVE_MENU_COPY=sushinaa-cms`). Coupons and orders are never promoted — see `docs/data-kinds.md`. `npm run db:migrate` is for disposable databases. Do not run it against Turso.
 
 Uploaded JPEG/PNG/WebP photos (up to 4 MB, under Vercel's request limit) are decoded, resized and stored as WebP in the database. Their content-addressed media URLs are immutable. Existing bundled photos remain in `public/`; uploads do not depend on an ephemeral deployment filesystem. Removing a photo association keeps the underlying upload available for other items.
 

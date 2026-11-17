@@ -1,8 +1,31 @@
 import { createClient, type Client, type InValue } from "@libsql/client";
 import { databaseHost, LIVE_DATABASE_HOST } from "../src/lib/deploy-env";
 
-const MENU_SQL = "SELECT id, revision, content FROM menu WHERE id = 1";
-const MEDIA_SQL = "SELECT id, content, type FROM media";
+/** Catalog only — see `docs/data-kinds.md`. */
+export const CATALOG_TABLES = ["menu", "media"] as const;
+
+/**
+ * Env-local. Never appear in catalog copy/promote SQL.
+ * Coupons are recreated fresh on live — never promoted from dev.
+ */
+export const NEVER_PROMOTE_TABLES = [
+  "orders",
+  "payment_attempts",
+  "payment_events",
+  "order_events",
+  "order_outbox",
+  "order_edits",
+  "order_adjustments",
+  "sessions",
+  "staff_sessions",
+  "staff_users",
+  "login_attempts",
+  "audit",
+  "coupons",
+] as const;
+
+export const MENU_SQL = "SELECT id, revision, content FROM menu WHERE id = 1";
+export const MEDIA_SQL = "SELECT id, content, type FROM media";
 
 const TARGET_SCHEMA = [
   `CREATE TABLE IF NOT EXISTS menu (id INTEGER PRIMARY KEY CHECK(id=1), revision INTEGER NOT NULL, content TEXT NOT NULL)`,

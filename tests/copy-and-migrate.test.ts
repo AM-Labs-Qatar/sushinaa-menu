@@ -4,7 +4,14 @@ import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createClient } from "@libsql/client";
-import { copyMenuAndMedia, CopyRefused, readOnlySource } from "../scripts/copy-to-dev";
+import { readFileSync } from "node:fs";
+import {
+  CATALOG_TABLES,
+  copyMenuAndMedia,
+  CopyRefused,
+  NEVER_PROMOTE_TABLES,
+  readOnlySource,
+} from "../scripts/copy-to-dev";
 import { copyDevMenuToLive } from "../scripts/copy-dev-menu-to-live";
 import { migrate, MigrateRefused } from "../scripts/migrate";
 import { checkMigrationDir, migrationViolations } from "../scripts/check-migrations";
@@ -164,9 +171,36 @@ test("migration files cannot drop or rename, and the secret scan catches tokens"
   assert.deepEqual(secretHits(".env.example", "CMS_DATABASE_AUTH_TOKEN=\"abcdefghijklm\""), []);
 });
 
+test("catalog allowlist is menu+media; coupons and orders are never promote targets", () => {
+  assert.deepEqual([...CATALOG_TABLES], ["menu", "media"]);
+  assert.ok(NEVER_PROMOTE_TABLES.includes("coupons"));
+  assert.ok(NEVER_PROMOTE_TABLES.includes("orders"));
+  const sources = [
+    readFileSync(join(process.cwd(), "scripts/copy-to-dev.ts"), "utf8"),
+    readFileSync(join(process.cwd(), "scripts/copy-dev-menu-to-live.ts"), "utf8"),
+  ].join("\n");
+  for (const table of NEVER_PROMOTE_TABLES) {
+    assert.equal(
+      new RegExp(`\\b(?:FROM|INTO|UPDATE|DELETE FROM)\\s+${table}\\b`, "i").test(sources),
+      false,
+      `copy scripts must not SQL-touch ${table}`,
+    );
+  }
+});
+
 test("dev→live promote copies menu/media with confirm and refuses without it", async () => {
   const dir = mkdtempSync(join(tmpdir(), "sushinaa-promote-"));
   const sourceUrl = await sourceDb(dir, 8);
+  const source = createClient({ url: sourceUrl });
+  await source.execute(
+    `CREATE TABLE coupons (id TEXT PRIMARY KEY, code TEXT NOT NULL)`,
+  );
+  await source.execute({
+    sql: "INSERT INTO coupons (id, code) VALUES (?, ?)",
+    args: ["c1", "DEVONLY"],
+  });
+  source.close();
+
   const targetUrl = `file:${dir}/live.db`;
   const live = createClient({ url: targetUrl });
   await live.batch(SCHEMA, "write");
@@ -198,6 +232,7 @@ test("dev→live promote copies menu/media with confirm and refuses without it",
   assert.equal(Number(menu.rows[0].revision), 8);
   const sessions = await after.execute("SELECT token FROM sessions");
   assert.equal(String(sessions.rows[0].token), "keep-me");
+  await assert.rejects(after.execute("SELECT * FROM coupons"), /no such table/i);
   after.close();
 });
 

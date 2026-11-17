@@ -100,9 +100,11 @@ On `sushinaa-menu`, a deployment that is not production sends `X-Robots-Tag: noi
 
 ## Copy and migrations
 
-`npm run db:copy-to-dev` reads only `menu` and `media` from `SOURCE_DATABASE_URL` with a read-only token, and writes them to `TARGET_DATABASE_URL`. It refuses the live hostname as a target, refuses a target whose marker is not `development`, and writes that marker on an empty target. It does not read `sessions`, `audit`, or `login_attempts`. Run it again to refresh dev. Those four variables are shell variables for that command, not Vercel variables.
+Catalog vs transactions vs secrets: **`docs/data-kinds.md`**. Day-to-day menu edits are live CMS; copy scripts only move `menu` + `media`. Coupons and orders are never promoted — recreate coupons on live.
 
-`npm run db:copy-dev-menu-to-live` is the reverse direction for cutover: source must be the **dev** database (marker `development`), target must be **live**, and `CONFIRM_LIVE_MENU_COPY=sushinaa-cms` is required. It writes only `menu` and `media` and does not touch live `env_marker`, sessions, audit, or orders. Shell variables only — never store the confirmation in Vercel.
+`npm run db:copy-to-dev` reads only `menu` and `media` from `SOURCE_DATABASE_URL` with a read-only token, and writes them to `TARGET_DATABASE_URL`. It refuses the live hostname as a target, refuses a target whose marker is not `development`, and writes that marker on an empty target. It does not read sessions, audit, login_attempts, orders, or coupons. Run it again to refresh dev. Those four variables are shell variables for that command, not Vercel variables.
+
+`npm run db:copy-dev-menu-to-live` is the reverse direction for cutover: source must be the **dev** database (marker `development`), target must be **live**, and `CONFIRM_LIVE_MENU_COPY=sushinaa-cms` is required. It writes only `menu` and `media` and does not touch live `env_marker`, sessions, audit, orders, or coupons. Shell variables only — never store the confirmation in Vercel.
 
 Live ordering stays off until `ORDERING_LIVE_ENABLED=1` on `sushinaa-menu` Production. Unset (default) keeps the live Turso host refused for order tables and checkout. After that flag is set, app bootstrap creates order/staff schema on live; do not run `npm run db:migrate` against live.
 

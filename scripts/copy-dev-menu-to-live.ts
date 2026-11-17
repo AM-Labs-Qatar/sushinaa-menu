@@ -1,9 +1,7 @@
 import { createClient, type Client, type InValue } from "@libsql/client";
 import { databaseHost, LIVE_DATABASE_HOST } from "../src/lib/deploy-env";
-import { CopyRefused, readOnlySource } from "./copy-to-dev";
+import { CopyRefused, MEDIA_SQL, MENU_SQL, readOnlySource } from "./copy-to-dev";
 
-const MENU_SQL = "SELECT id, revision, content FROM menu WHERE id = 1";
-const MEDIA_SQL = "SELECT id, content, type FROM media";
 const CONFIRM_VALUE = "sushinaa-cms";
 
 const LIVE_SCHEMA = [
@@ -34,8 +32,9 @@ export type PromoteEndpoints = {
 };
 
 /**
- * Promote menu + media from the development Turso database onto live.
- * Does not touch sessions, audit, login_attempts, orders, or env_marker on live.
+ * Promote catalog (menu + media) from the development Turso database onto live.
+ * Does not touch orders, payments, sessions, audit, login_attempts, staff,
+ * coupons, or env_marker on live. See `docs/data-kinds.md`.
  */
 export async function copyDevMenuToLive(endpoints: PromoteEndpoints) {
   if (endpoints.confirm !== CONFIRM_VALUE) {
