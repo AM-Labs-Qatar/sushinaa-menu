@@ -1,17 +1,10 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
+import { hostName } from "@/storefront/resolve";
 
 const LEGACY_HOST = "sushinaa-menu.vercel.app";
 const ADMIN_HOST = "admin.sushinaa.qa";
 const MENU_ORIGIN = "https://menu.sushinaa.qa";
-
-function requestHost(request: NextRequest) {
-  return (request.headers.get("host") ?? "")
-    .split(",")[0]
-    .trim()
-    .toLowerCase()
-    .split(":")[0];
-}
 
 /**
  * OXiPOS may POST with a trailing slash. Next would 308 to the no-slash route and
@@ -30,7 +23,7 @@ export function rewritePosTrailingSlash(pathname: string): string | null {
  * - `/api/pos/…/` → rewrite without trailing slash (no redirect)
  */
 export function proxy(request: NextRequest) {
-  const host = requestHost(request);
+  const host = hostName(request.headers.get("host"));
   const { pathname, search } = request.nextUrl;
 
   if (host === LEGACY_HOST) {

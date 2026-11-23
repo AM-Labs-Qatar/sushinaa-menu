@@ -4,7 +4,8 @@ import type { MenuChannel } from "@/cms/schema";
 export type StorefrontMode = MenuChannel; // "menu" | "pickup"
 export type Storefront = { channel: MenuChannel; mode: StorefrontMode };
 
-function hostName(hostHeader: string | null | undefined): string {
+/** First Host value, lowercased, without port. Shared with the edge proxy. */
+export function hostName(hostHeader: string | null | undefined): string {
   return (hostHeader ?? "")
     .split(",")[0]
     .trim()
