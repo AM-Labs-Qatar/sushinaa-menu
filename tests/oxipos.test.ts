@@ -280,9 +280,11 @@ test("POST accepted with and without trailing slash returns the same result", as
     }),
     { params: Promise.resolve({ id: String(posId) }) },
   );
+  const firstBody = await first.text();
+  const secondBody = await second.text();
   assert.equal(first.status, 200);
   assert.equal(second.status, 200);
-  assert.equal(first.status, second.status);
+  assert.equal(firstBody, secondBody);
 });
 
 test("unpaid restaurant orders still pull for POS (payment is out of band)", async () => {

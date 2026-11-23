@@ -13,14 +13,29 @@ function requestHost(request: NextRequest) {
     .split(":")[0];
 }
 
+function isPosApiPath(pathname: string) {
+  return pathname === "/api/pos" || pathname.startsWith("/api/pos/");
+}
+
 /**
- * OXiPOS may POST with a trailing slash. Next would 308 to the no-slash route and
- * drop the body — rewrite instead so both forms hit the same handler.
+ * OXiPOS may POST with a trailing slash. A 308 would drop the body, so rewrite
+ * both forms onto the same handler.
  */
 export function rewritePosTrailingSlash(pathname: string): string | null {
-  if (!pathname.startsWith("/api/pos/")) return null;
+  if (!isPosApiPath(pathname)) return null;
   if (!pathname.endsWith("/") || pathname === "/api/pos/") return null;
   return pathname.replace(/\/+$/, "");
+}
+
+/**
+ * Next's default `trailingSlash: false` for every path that is not the POS API.
+ * Returns the no-slash path, or null when this request must not 308.
+ */
+function pageTrailingSlashTarget(pathname: string): string | null {
+  if (isPosApiPath(pathname)) return null;
+  if (pathname === "/" || !pathname.endsWith("/")) return null;
+  const stripped = pathname.replace(/\/+$/, "");
+  return stripped || "/";
 }
 
 /**
@@ -28,6 +43,7 @@ export function rewritePosTrailingSlash(pathname: string): string | null {
  * - legacy vercel.app → 301 to menu.sushinaa.qa
  * - admin.sushinaa.qa → CMS at `/` (rewrite to /admin); `/admin` URLs canonicalize away
  * - `/api/pos/…/` → rewrite without trailing slash (no redirect)
+ * - any other path ending in `/` → 308 to the no-slash path
  */
 export function proxy(request: NextRequest) {
   const host = requestHost(request);
@@ -52,8 +68,13 @@ export function proxy(request: NextRequest) {
 
   const posPath = rewritePosTrailingSlash(pathname);
   if (posPath) {
-    // Build a fresh URL — NextURL.clone() keeps a trailing slash on pathname.
+    // Build a fresh URL. NextURL.clone() keeps a trailing slash on pathname.
     return NextResponse.rewrite(new URL(posPath + search, request.url));
+  }
+
+  const canonical = pageTrailingSlashTarget(pathname);
+  if (canonical) {
+    return NextResponse.redirect(new URL(canonical + search, request.url), 308);
   }
 
   return NextResponse.next();

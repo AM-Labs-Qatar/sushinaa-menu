@@ -23,7 +23,7 @@ Depend only on this document and the vendor guide field names. Do not encode pol
 
 ## Endpoints we expose
 
-Canonical paths have **no** trailing slash (App Router). Trailing-slash forms are accepted via an internal rewrite — never a 308 — so OXiPOS POSTs keep their body.
+Canonical paths have **no** trailing slash (App Router). `skipTrailingSlashRedirect` is set so Next does not 308 before proxy. Proxy then rewrites `/api/pos/…/` to the canonical path. That rewrite is not a redirect, so an OXiPOS POST keeps its body. Any other path that ends with `/` still returns 308 to the form without the slash.
 
 | Method | Canonical path | Also accepted |
 | --- | --- | --- |

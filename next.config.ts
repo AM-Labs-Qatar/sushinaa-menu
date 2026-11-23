@@ -44,6 +44,9 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
+  // Next 308s a trailing slash before proxy runs. That drops an OXiPOS POST body.
+  // Proxy rewrites /api/pos and 308s every other slashed path.
+  skipTrailingSlashRedirect: true,
   devIndicators: false,
   // Opt in to the exact LAN address used for local phone previews.
   allowedDevOrigins: process.env.SUSHINAA_PREVIEW_HOST

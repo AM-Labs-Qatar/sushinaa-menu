@@ -62,3 +62,26 @@ test("POS trailing-slash paths rewrite without a redirect", () => {
     "https://example.invalid/api/pos/orders/42/accepted?x=1",
   );
 });
+
+test("non-POS trailing slash redirects 308 to the no-slash path", () => {
+  const res = proxy(request("menu.sushinaa.qa", "/down-town/?x=1"));
+  assert.equal(res.status, 308);
+  const loc = new URL(res.headers.get("location")!);
+  assert.equal(loc.pathname, "/down-town");
+  assert.equal(loc.search, "?x=1");
+  assert.equal(res.headers.get("x-middleware-rewrite"), null);
+
+  const doubled = proxy(request("order.sushinaa.qa", "/down-town//"));
+  assert.equal(doubled.status, 308);
+  assert.equal(new URL(doubled.headers.get("location")!).pathname, "/down-town");
+});
+
+test("site root and the POS API are not trailing-slash redirected", () => {
+  const root = proxy(request("menu.sushinaa.qa", "/"));
+  assert.equal(root.status, 200);
+  assert.equal(root.headers.get("location"), null);
+
+  const posRoot = proxy(request("menu.sushinaa.qa", "/api/pos/"));
+  assert.equal(posRoot.status, 200);
+  assert.equal(posRoot.headers.get("location"), null);
+});
