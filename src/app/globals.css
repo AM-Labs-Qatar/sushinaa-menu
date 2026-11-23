@@ -1665,7 +1665,7 @@ button {
 .order-tracker-number { flex-shrink: 0; }
 @media (max-width: 360px) { .order-tracker-number { display: none; } }
 
-/* Studio credit — test-dev / local only (see showAmLabsCredit). */
+/* Studio credit — branch picker and cart ticket (AmLabsCredit). */
 .am-labs-credit {
   display: inline-flex;
   align-items: center;

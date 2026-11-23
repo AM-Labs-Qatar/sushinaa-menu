@@ -49,8 +49,3 @@ export function touchesLiveDatabaseHost(url: string | undefined) {
   }
   return false;
 }
-
-/** Powered by AM Labs — shown on every deployment (menu, order, admin, test-dev). */
-export function showAmLabsCredit() {
-  return true;
-}

@@ -8,8 +8,7 @@ import { requestLang } from "@/i18n/request-lang";
 import { getMenu } from "@/cms/repository";
 import { publicMenu } from "@/cms/schema";
 import { MenuProvider } from "@/cms/context";
-import { AmLabsCreditProvider } from "@/components/site/AmLabsCredit";
-import { isProductionDeployment, showAmLabsCredit } from "@/lib/deploy-env";
+import { isProductionDeployment } from "@/lib/deploy-env";
 import "./globals.css";
 
 // Read the published menu at request time; preview builds need no database connection.
@@ -147,17 +146,15 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       <body className="min-h-full antialiased">
         {/* Dishes ship only with the menu page (src/app/page.tsx). */}
         <MenuProvider menu={{ ...publicMenu(menu, "menu"), dishes: [] }}>
-          <AmLabsCreditProvider show={showAmLabsCredit()}>
-            <LocaleProvider initial={lang}>
-              <SkipLink />
-              <script
-                type="application/ld+json"
-                dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c") }}
-              />
-              {children}
-              <Analytics />
-            </LocaleProvider>
-          </AmLabsCreditProvider>
+          <LocaleProvider initial={lang}>
+            <SkipLink />
+            <script
+              type="application/ld+json"
+              dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c") }}
+            />
+            {children}
+            <Analytics />
+          </LocaleProvider>
         </MenuProvider>
       </body>
     </html>
