@@ -16,9 +16,9 @@ Structure and coupling follow `docs/engineering/coding-principles.md` (and `.cur
 
 Read `docs/environments.md` and `docs/data-kinds.md` before touching a database, an env var, or a deployment.
 
-Production hosts (`main`, project `sushinaa-menu`, live Turso): **https://menu.sushinaa.qa** = on-site → OXiPOS (env ready, connect when restaurant is); **https://order.sushinaa.qa** = pickup → CMS + live Sadad; **https://admin.sushinaa.qa** = CMS (root, not `/admin`). https://sushinaa-menu.vercel.app redirects to the menu host. Do not write to the live database, repoint it, redeploy it, or migrate it casually. Do not push or merge to `main` without an explicit release.
+Production hosts (`main`, project `sushinaa-menu` on Vercel team `amlabs1` / amlabsqatar, live Turso): **https://menu.sushinaa.qa** = on-site → OXiPOS (env ready, connect when restaurant is); **https://order.sushinaa.qa** = pickup → CMS + live Sadad; **https://admin.sushinaa.qa** = CMS (root, not `/admin`). https://sushinaa-menu.vercel.app redirects to the menu host. Do not write to the live database, repoint it, redeploy it, or migrate it casually. Do not push or merge to `main` without an explicit release.
 
-Dev is https://test-dev-abu-iqbal-projects.vercel.app (project `test-dev`, **dev** Turso only — permanent playground). Never attach `*.sushinaa.qa` or live Sadad/Turso to `test-dev`. Local work uses `data/menu.db` or that dev database. Pull requests go into `dev`.
+Dev is https://test-dev-abu-iqbal-projects.vercel.app (project `test-dev` on the same `amlabs1` team, **dev** Turso only — permanent playground; the hostname is a kept pre-move alias). Never attach `*.sushinaa.qa` or live Sadad/Turso to `test-dev`. Local work uses `data/menu.db` or that dev database. Pull requests go into `dev`.
 
 **Data kinds:** catalog (`menu`/`media`) may be promoted; transactions (orders, payments, sessions, **coupons**, …) never; secrets stay in Vercel. Day-to-day menu edits are live CMS; schema/code ships `dev` → `main`. See `docs/data-kinds.md`.
 
