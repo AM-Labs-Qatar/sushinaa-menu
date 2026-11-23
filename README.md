@@ -44,7 +44,7 @@ Read [docs/environments.md](docs/environments.md) before changing a database, a 
 | Site | URL | Database |
 | --- | --- | --- |
 | Production | https://menu.sushinaa.qa (on-site → OXiPOS); https://order.sushinaa.qa (pickup → CMS + Sadad) | Live Turso database. Do not write to it, repoint it, redeploy it, or migrate it casually. |
-| Dev | https://test-dev-abu-iqbal-projects.vercel.app | Dev Turso database, a copy of the menu and photos. |
+| Dev | https://test-dev-abu-iqbal-projects.vercel.app (Vercel team `amlabs1` / amlabsqatar; alias kept after move) | Dev Turso database, a copy of the menu and photos. |
 | Local | http://localhost:3005 | `data/menu.db` unless you point `CMS_DATABASE_URL` at the dev database. |
 
 Do not push or merge to `main`. Feature work opens a pull request into `dev`. Abu releases `dev` to `main`.
