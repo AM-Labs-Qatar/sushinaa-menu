@@ -27,9 +27,14 @@ export const NEVER_PROMOTE_TABLES = [
 export const MENU_SQL = "SELECT id, revision, content FROM menu WHERE id = 1";
 export const MEDIA_SQL = "SELECT id, content, type FROM media";
 
-const TARGET_SCHEMA = [
+/** Catalog tables on any copy/promote target. */
+export const CATALOG_SCHEMA = [
   `CREATE TABLE IF NOT EXISTS menu (id INTEGER PRIMARY KEY CHECK(id=1), revision INTEGER NOT NULL, content TEXT NOT NULL)`,
   `CREATE TABLE IF NOT EXISTS media (id TEXT PRIMARY KEY, content BLOB NOT NULL, type TEXT NOT NULL)`,
+];
+
+const TARGET_SCHEMA = [
+  ...CATALOG_SCHEMA,
   `CREATE TABLE IF NOT EXISTS env_marker (id INTEGER PRIMARY KEY CHECK (id = 1), environment TEXT NOT NULL)`,
 ];
 
@@ -58,7 +63,8 @@ export function readOnlySource(client: Client): Client {
   });
 }
 
-async function marker(client: Client): Promise<string | null> {
+/** The env_marker environment, or null when the table or row is missing. */
+export async function envMarker(client: Client): Promise<string | null> {
   try {
     const result = await client.execute("SELECT environment FROM env_marker WHERE id = 1");
     const value = result.rows[0]?.environment;
@@ -68,6 +74,49 @@ async function marker(client: Client): Promise<string | null> {
     if (/no such table/i.test(message)) return null;
     throw error;
   }
+}
+
+/**
+ * Reads menu + media through the read-only source and replaces them on the
+ * target in one write batch. Callers do every host and marker check first.
+ */
+export async function replaceCatalog(source: Client, target: Client) {
+  const menu = await source.execute(MENU_SQL);
+  const media = await source.execute(MEDIA_SQL);
+  const row = menu.rows[0];
+  if (!row) throw new CopyRefused("The source menu row is missing.");
+
+  const statements: { sql: string; args: InValue[] }[] = [
+    { sql: "DELETE FROM media", args: [] },
+    { sql: "DELETE FROM menu", args: [] },
+    {
+      sql: "INSERT INTO menu (id, revision, content) VALUES (?, ?, ?)",
+      args: [Number(row.id), Number(row.revision), String(row.content)],
+    },
+  ];
+  for (const item of media.rows) {
+    const bytes = item.content;
+    const blob =
+      bytes instanceof Uint8Array
+        ? bytes
+        : bytes instanceof ArrayBuffer
+          ? new Uint8Array(bytes)
+          : typeof bytes === "string"
+            ? Buffer.from(bytes)
+            : null;
+    if (!blob) throw new CopyRefused("A media row has no content.");
+    statements.push({
+      sql: "INSERT INTO media (id, content, type) VALUES (?, ?, ?)",
+      args: [String(item.id), blob, String(item.type)],
+    });
+  }
+  await target.batch(statements, "write");
+  const content = JSON.parse(String(row.content)) as { dishes?: unknown[] };
+  return {
+    revision: Number(row.revision),
+    dishes: Array.isArray(content.dishes) ? content.dishes.length : 0,
+    media: media.rows.length,
+  };
 }
 
 export type CopyEndpoints = {
@@ -101,7 +150,7 @@ export async function copyMenuAndMedia(endpoints: CopyEndpoints) {
   );
   const target = createClient({ url: endpoints.targetUrl, authToken: endpoints.targetToken });
   try {
-    const current = await marker(target);
+    const current = await envMarker(target);
     if (current !== null && current !== "development") {
       throw new CopyRefused("Refusing to write. The target marker is not development.");
     }
@@ -110,42 +159,7 @@ export async function copyMenuAndMedia(endpoints: CopyEndpoints) {
       await target.execute("INSERT INTO env_marker (id, environment) VALUES (1, 'development')");
     }
 
-    const menu = await source.execute(MENU_SQL);
-    const media = await source.execute(MEDIA_SQL);
-    const row = menu.rows[0];
-    if (!row) throw new CopyRefused("The source menu row is missing.");
-
-    const statements: { sql: string; args: InValue[] }[] = [
-      { sql: "DELETE FROM media", args: [] },
-      { sql: "DELETE FROM menu", args: [] },
-      {
-        sql: "INSERT INTO menu (id, revision, content) VALUES (?, ?, ?)",
-        args: [Number(row.id), Number(row.revision), String(row.content)],
-      },
-    ];
-    for (const item of media.rows) {
-      const bytes = item.content;
-      const blob =
-        bytes instanceof Uint8Array
-          ? bytes
-          : bytes instanceof ArrayBuffer
-            ? new Uint8Array(bytes)
-            : typeof bytes === "string"
-              ? Buffer.from(bytes)
-              : null;
-      if (!blob) throw new CopyRefused("A media row has no content.");
-      statements.push({
-        sql: "INSERT INTO media (id, content, type) VALUES (?, ?, ?)",
-        args: [String(item.id), blob, String(item.type)],
-      });
-    }
-    await target.batch(statements, "write");
-    const content = JSON.parse(String(row.content)) as { dishes?: unknown[] };
-    return {
-      revision: Number(row.revision),
-      dishes: Array.isArray(content.dishes) ? content.dishes.length : 0,
-      media: media.rows.length,
-    };
+    return await replaceCatalog(source, target);
   } finally {
     source.close();
     target.close();
