@@ -454,8 +454,8 @@ function FeedInner({ branch, onPickup, branchBar, orderTracking, inactive = fals
       </div>
       <div ref={gestureRef} className="scroll-gesture" hidden aria-hidden="true">
         <svg className="scroll-gesture-hand" width="64" height="80" viewBox="0 0 26 32" fill="currentColor">
-          <path d="M8 16V4a2 2 0 0 1 4 0v8a2 2 0 0 1 4 0v1a2 2 0 0 1 4 0v2a2 2 0 0 1 4 0v7c0 5-3 8-8 8h-2c-3 0-5-2-7-5l-5-7c-1.5-2.5 1-4.5 3-2l3 3Z" stroke="#3a241d" strokeWidth="1" strokeLinejoin="round" />
-          <path d="M12 12v6m4-5v6m4-4v5" stroke="#9d7663" strokeWidth=".8" strokeLinecap="round" />
+          <path d="M8 16V4a2 2 0 0 1 4 0v8a2 2 0 0 1 4 0v1a2 2 0 0 1 4 0v2a2 2 0 0 1 4 0v7c0 5-3 8-8 8h-2c-3 0-5-2-7-5l-5-7c-1.5-2.5 1-4.5 3-2l3 3Z" stroke="var(--color-gesture-ink)" strokeWidth="1" strokeLinejoin="round" />
+          <path d="M12 12v6m4-5v6m4-4v5" stroke="var(--color-gesture-line)" strokeWidth=".8" strokeLinecap="round" />
         </svg>
       </div>
       {itemCount > 0 && !sheetOpen ? <button type="button" className="sticky-cta" onClick={() => setOpen(true)}>
