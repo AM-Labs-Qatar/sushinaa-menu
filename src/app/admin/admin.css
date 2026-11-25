@@ -1,11 +1,21 @@
 .admin {
-  --ink: #18212f;
-  --muted: #657285;
-  --line: #e3e7ed;
-  --accent: #b52331;
+  --color-admin-surface: #f5f7fa;
+  --color-admin-ink: #18212f;
+  --color-admin-muted: #657285;
+  --color-admin-line: #e3e7ed;
+  --color-admin-accent: #b52331;
+  --color-admin-ws-ink: #292724;
+  --color-admin-ws-muted: #807a72;
+  --color-admin-ws-muted-quiet: #6c665f;
+  --color-admin-ws-line: #e9e4dc;
+  --color-admin-ws-accent: #a92735;
+  --ink: var(--color-admin-ink);
+  --muted: var(--color-admin-muted);
+  --line: var(--color-admin-line);
+  --accent: var(--color-admin-accent);
   position: relative;
   min-height: 100dvh;
-  background: #f5f7fa;
+  background: var(--color-admin-surface);
   color: var(--ink);
   font:
     14px/1.5 var(--font-sans),
