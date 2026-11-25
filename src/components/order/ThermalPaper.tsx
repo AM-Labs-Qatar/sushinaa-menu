@@ -4,9 +4,9 @@ import type { ReactNode } from 'react';
 // otherwise print drivers can append a viewport (or an A4 page) of blank paper.
 const css = `
 @page { size: 80mm auto; margin: 0; }
-html:has(.ticket-sheet), body:has(.ticket-sheet) { width: 80mm; min-width: 0; height: auto !important; min-height: 0 !important; margin: 0 !important; padding: 0 !important; color-scheme: light; background: #fff !important; color: #000; }
+html:has(.ticket-sheet), body:has(.ticket-sheet) { width: 80mm; min-width: 0; height: auto !important; min-height: 0 !important; margin: 0 !important; padding: 0 !important; color-scheme: light; background: var(--color-white) !important; color: var(--color-black); }
 body:has(.ticket-sheet) > .skip-link { display: none !important; }
-.ticket-sheet { box-sizing: border-box; width: 80mm; max-width: 80mm; margin: 0; padding: 4mm; color: #000; background: #fff; font: 10.5pt/1.3 Arial, Helvetica, sans-serif; overflow-wrap: anywhere; text-align: left; }
+.ticket-sheet { box-sizing: border-box; width: 80mm; max-width: 80mm; margin: 0; padding: 4mm; color: var(--color-black); background: var(--color-white); font: 10.5pt/1.3 Arial, Helvetica, sans-serif; overflow-wrap: anywhere; text-align: left; }
 .ticket-sheet * { box-sizing: border-box; }
 .ticket-sheet p, .ticket-sheet h1, .ticket-sheet h2 { margin: 0; }
 .ticket-sheet [lang="ar"] { font-family: var(--font-arabic), Tahoma, Arial, sans-serif; font-weight: 500; }
@@ -23,9 +23,9 @@ body:has(.ticket-sheet) > .skip-link { display: none !important; }
 .thermal-source { display: flex; justify-content: space-between; align-items: baseline; gap: 4mm; margin: 1mm 0 0; font-size: 10pt; text-align: left; }
 .ticket-number-label { margin: 0; font-size: 8.5pt; font-weight: 700; letter-spacing: .03em; line-height: 1.2; }
 .ticket-sheet .ticket-number { font-size: 32pt; font-weight: 700; line-height: 0.95; margin: 0.2mm 0 1mm; letter-spacing: .02em; }
-.thermal-rule, .ticket-sheet .receipt-rule { border: 0; border-top: 1px dashed #000; margin: 2.5mm 0; }
+.thermal-rule, .ticket-sheet .receipt-rule { border: 0; border-top: 1px dashed var(--color-black); margin: 2.5mm 0; }
 .thermal-columns, .thermal-line { display: grid; grid-template-columns: 9mm minmax(0,1fr) 18mm; gap: 2mm; align-items: start; }
-.thermal-columns { padding: 1mm 0; font-size: 9.5pt; border-block: 1px dashed #000; margin: 2mm 0; }
+.thermal-columns { padding: 1mm 0; font-size: 9.5pt; border-block: 1px dashed var(--color-black); margin: 2mm 0; }
 .thermal-columns > :last-child, .thermal-amount { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
 .thermal-columns span { display: block; white-space: nowrap; }
 .thermal-line { padding: 1.5mm 0; break-inside: avoid; }
@@ -108,5 +108,5 @@ export function OrderBarcode({ value }: { value: string }) {
     });
     x += 1;
   }
-  return <><svg className="thermal-barcode" role="img" aria-label={`Order reference ${value}`} viewBox={`0 0 ${x+10} 40`} preserveAspectRatio="none" fill="#000">{rects}</svg><p className="thermal-reference">{value}</p></>;
+  return <><svg className="thermal-barcode" role="img" aria-label={`Order reference ${value}`} viewBox={`0 0 ${x+10} 40`} preserveAspectRatio="none" fill="var(--color-black)">{rects}</svg><p className="thermal-reference">{value}</p></>;
 }

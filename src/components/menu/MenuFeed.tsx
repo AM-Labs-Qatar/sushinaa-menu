@@ -15,6 +15,7 @@ import { CartSheet } from "../order/CartSheet";
 import { CategoryOverlay } from "./CategoryOverlay";
 import { DishDetailSheet } from "./DishDetailSheet";
 import { DishSlide } from "./DishSlide";
+import { Button } from "@/components/ui/Button";
 
 // Ignore Arabic diacritics and common alef variants, plus case and punctuation.
 function normalizeSearch(value: string) {
@@ -446,6 +447,7 @@ function FeedInner({ branch, onPickup, branchBar, orderTracking, inactive = fals
             const atSeam = spot <= 3 || spot >= n - 2;
             const close = (d: number) => d >= -1 && d <= 3;
             return <DishSlide key={item.key} dish={item.dish} diet={diet} marked={item.copy === 1}
+              cta={itemCount > 0 && !sheetOpen ? "secondary" : "primary"}
               active={item.copy === 1 && item.real === activeIndex}
               eager={close(delta) || (atSeam && (close(delta - n) || close(delta + n)))}
               inert={item.copy !== 1}
@@ -454,12 +456,12 @@ function FeedInner({ branch, onPickup, branchBar, orderTracking, inactive = fals
       </div>
       <div ref={gestureRef} className="scroll-gesture" hidden aria-hidden="true">
         <svg className="scroll-gesture-hand" width="64" height="80" viewBox="0 0 26 32" fill="currentColor">
-          <path d="M8 16V4a2 2 0 0 1 4 0v8a2 2 0 0 1 4 0v1a2 2 0 0 1 4 0v2a2 2 0 0 1 4 0v7c0 5-3 8-8 8h-2c-3 0-5-2-7-5l-5-7c-1.5-2.5 1-4.5 3-2l3 3Z" stroke="#3a241d" strokeWidth="1" strokeLinejoin="round" />
-          <path d="M12 12v6m4-5v6m4-4v5" stroke="#9d7663" strokeWidth=".8" strokeLinecap="round" />
+          <path d="M8 16V4a2 2 0 0 1 4 0v8a2 2 0 0 1 4 0v1a2 2 0 0 1 4 0v2a2 2 0 0 1 4 0v7c0 5-3 8-8 8h-2c-3 0-5-2-7-5l-5-7c-1.5-2.5 1-4.5 3-2l3 3Z" stroke="var(--color-gesture-ink)" strokeWidth="1" strokeLinejoin="round" />
+          <path d="M12 12v6m4-5v6m4-4v5" stroke="var(--color-gesture-line)" strokeWidth=".8" strokeLinecap="round" />
         </svg>
       </div>
-      {itemCount > 0 && !sheetOpen ? <button type="button" className="sticky-cta" onClick={() => setOpen(true)}>
-        <span>{t.viewOrder}</span><small>{formatQar(totalQar, lang, menu.settings)}</small></button> : null}
+      {itemCount > 0 && !sheetOpen ? <Button type="button" size="sticky" className="sticky-cta" onClick={() => setOpen(true)}>
+        <span>{t.viewOrder}</span><small>{formatQar(totalQar, lang, menu.settings)}</small></Button> : null}
       <CategoryOverlay open={categoriesOpen} title={t.menu} label={t.category} closeLabel={t.close}
         logo={menu.settings.logo} brand={t.brand} value={category}
         filters={<div className="category-filters" role="group" aria-label={t.filters}>

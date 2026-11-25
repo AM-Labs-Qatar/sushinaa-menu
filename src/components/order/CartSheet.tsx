@@ -177,16 +177,16 @@ export function CartSheet({ open, onClose, onPickup }: Props) {
 
 function LandCruiser() {
   return <svg className="land-cruiser" viewBox="0 0 108 54" width="112" height="52">
-    <ellipse cx="54" cy="50" rx="42" ry="2" fill="#4a1512" opacity=".4" />
-    <path fill="#f7f4ee" d="M6 46V32h6l10-18h40l12 14h26v18H6Z" />
-    <path fill="#8a1538" d="M6 38h92v3.2H6Z" />
-    <path fill="#1b1714" d="M26 18h26v14H24V20c0-1.1.9-2 2-2Zm30 0h24l8 14H56V18Z" />
-    <circle cx="30" cy="46" r="7.4" fill="#171412" />
-    <circle cx="30" cy="46" r="2.7" fill="#e7e1d6" />
-    <circle cx="82" cy="46" r="7.4" fill="#171412" />
-    <circle cx="82" cy="46" r="2.7" fill="#e7e1d6" />
-    <rect x="58" y="32" width="15" height="6" rx="1" fill="#fff" stroke="#8a1538" strokeWidth=".8" />
-    <path fill="#8a1538" d="M63.2 33.1h4.4v3.8h-4.4z" />
-    <rect x="96" y="30" width="6" height="3.2" rx="1" fill="#f3e2a2" />
+    <ellipse cx="54" cy="50" rx="42" ry="2" fill="var(--color-c-4a1512)" opacity=".4" />
+    <path fill="var(--color-c-f7f4ee)" d="M6 46V32h6l10-18h40l12 14h26v18H6Z" />
+    <path fill="var(--color-c-8a1538)" d="M6 38h92v3.2H6Z" />
+    <path fill="var(--color-c-1b1714)" d="M26 18h26v14H24V20c0-1.1.9-2 2-2Zm30 0h24l8 14H56V18Z" />
+    <circle cx="30" cy="46" r="7.4" fill="var(--color-c-171412)" />
+    <circle cx="30" cy="46" r="2.7" fill="var(--color-c-e7e1d6)" />
+    <circle cx="82" cy="46" r="7.4" fill="var(--color-c-171412)" />
+    <circle cx="82" cy="46" r="2.7" fill="var(--color-c-e7e1d6)" />
+    <rect x="58" y="32" width="15" height="6" rx="1" fill="var(--color-white)" stroke="var(--color-c-8a1538)" strokeWidth=".8" />
+    <path fill="var(--color-c-8a1538)" d="M63.2 33.1h4.4v3.8h-4.4z" />
+    <rect x="96" y="30" width="6" height="3.2" rx="1" fill="var(--color-c-f3e2a2)" />
   </svg>;
 }

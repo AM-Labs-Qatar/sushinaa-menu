@@ -6,7 +6,7 @@
     "dev": "next dev --port 3005",
     "build": "next build",
     "start": "next start --port 3005",
-    "lint": "eslint",
+    "lint": "eslint && tsx scripts/design-tokens-lint.ts",
     "cms:seed": "tsx scripts/seed.ts",
     "db:copy-to-dev": "tsx scripts/copy-to-dev.ts",
     "db:copy-dev-menu-to-live": "tsx scripts/copy-dev-menu-to-live.ts",

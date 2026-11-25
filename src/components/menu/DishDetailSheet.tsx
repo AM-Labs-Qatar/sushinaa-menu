@@ -6,6 +6,7 @@ import type { DietFilter, Dish } from "@/catalog/menu";
 import type { Choice, Extra, PieceCount, Selection } from "@/catalog/types";
 import { useCart } from "@/ordering/cart";
 import { useLocale } from "@/i18n/locale";
+import { Button } from "@/components/ui/Button";
 import {
   dishDescription,
   fieldLabel as getFieldLabel,
@@ -262,14 +263,15 @@ export function DishDetailSheet({ dish, diet = "all", onClose, ordering = false,
               +
             </button>
           </div>
-          <button
+          <Button
             type="button"
-            className={`detail-add ${justAdded ? "detail-add-done" : ""}`}
+            size="detail"
+            className={`detail-add${justAdded ? " detail-add-done" : ""}`}
             onClick={onAdd}
             disabled={!ready}
           >
             {justAdded ? (onSave ? (lang === "ar" ? "تم الحفظ" : "Saved") : t.added) : `${onSave ? (lang === "ar" ? "حفظ التغييرات" : "Save changes") : t.addToOrder} · ${formatQar(total, lang)}`}
-          </button>
+          </Button>
         </div>
       </div>
     </div>

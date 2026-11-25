@@ -11,6 +11,7 @@ import { hasPriceRange, imageFor, photoPosition, selectionForDiet, shownPrice } 
 import type { Copy } from "@/i18n/copy";
 import { DietTags } from "./DietTags";
 import { PriceShown, priceSpoken } from "./PriceShown";
+import { buttonClass, type ButtonVariant } from "@/components/ui/Button";
 
 type Props = {
   dish: Dish;
@@ -19,6 +20,7 @@ type Props = {
   eager?: boolean;
   marked?: boolean;
   inert?: boolean;
+  cta?: ButtonVariant;
   onOpen: (dish: Dish) => void;
 };
 
@@ -29,6 +31,7 @@ export const DishSlide = memo(function DishSlide({
   eager = false,
   marked = false,
   inert = false,
+  cta = "primary",
   onOpen,
 }: Props) {
   const { lang, t } = useLocale();
@@ -109,7 +112,7 @@ export const DishSlide = memo(function DishSlide({
           <DietTags tags={dish.tags} />
           <p className="dish-desc dish-desc-feed">{description}</p>
           {hint ? <p className="tap-hint">{hint}</p> : null}
-          <span className="slide-cta">{t.addToOrder}</span>
+          <span className={buttonClass(cta, "slide", "slide-cta")}>{t.addToOrder}</span>
         </div>
       </button>
     </article>
