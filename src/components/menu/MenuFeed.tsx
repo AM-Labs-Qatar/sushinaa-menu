@@ -15,6 +15,7 @@ import { CartSheet } from "../order/CartSheet";
 import { CategoryOverlay } from "./CategoryOverlay";
 import { DishDetailSheet } from "./DishDetailSheet";
 import { DishSlide } from "./DishSlide";
+import { Button } from "@/components/ui/Button";
 
 // Ignore Arabic diacritics and common alef variants, plus case and punctuation.
 function normalizeSearch(value: string) {
@@ -446,6 +447,7 @@ function FeedInner({ branch, onPickup, branchBar, orderTracking, inactive = fals
             const atSeam = spot <= 3 || spot >= n - 2;
             const close = (d: number) => d >= -1 && d <= 3;
             return <DishSlide key={item.key} dish={item.dish} diet={diet} marked={item.copy === 1}
+              cta={itemCount > 0 && !sheetOpen ? "secondary" : "primary"}
               active={item.copy === 1 && item.real === activeIndex}
               eager={close(delta) || (atSeam && (close(delta - n) || close(delta + n)))}
               inert={item.copy !== 1}
@@ -458,8 +460,8 @@ function FeedInner({ branch, onPickup, branchBar, orderTracking, inactive = fals
           <path d="M12 12v6m4-5v6m4-4v5" stroke="var(--color-gesture-line)" strokeWidth=".8" strokeLinecap="round" />
         </svg>
       </div>
-      {itemCount > 0 && !sheetOpen ? <button type="button" className="sticky-cta" onClick={() => setOpen(true)}>
-        <span>{t.viewOrder}</span><small>{formatQar(totalQar, lang, menu.settings)}</small></button> : null}
+      {itemCount > 0 && !sheetOpen ? <Button type="button" size="sticky" className="sticky-cta" onClick={() => setOpen(true)}>
+        <span>{t.viewOrder}</span><small>{formatQar(totalQar, lang, menu.settings)}</small></Button> : null}
       <CategoryOverlay open={categoriesOpen} title={t.menu} label={t.category} closeLabel={t.close}
         logo={menu.settings.logo} brand={t.brand} value={category}
         filters={<div className="category-filters" role="group" aria-label={t.filters}>

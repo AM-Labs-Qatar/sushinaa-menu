@@ -1,11 +1,11 @@
 "use client";
 
 import { useMenu } from "@/cms/context";
-import Link from "next/link";
 import { ContactForm } from "./ContactForm";
 import { CollectionNotice } from "./CollectionNotice";
 import { LegalShell } from "./LegalShell";
 import { useLocale } from "@/i18n/locale";
+import { Button } from "@/components/ui/Button";
 
 function arabicList(areas: string[]) {
   if (areas.length <= 1) return areas.join("");
@@ -186,14 +186,14 @@ export function ThankYouView() {
       <p>{t.thankBody}</p>
       <p>
         {t.whatsapp}{" "}
-        <a className="doc-cta" href={`https://wa.me/${SITE.whatsappE164}`}>
+        <Button variant="secondary" size="doc" href={`https://wa.me/${SITE.whatsappE164}`}>
           {SITE.whatsappDisplay}
-        </a>
+        </Button>
       </p>
       <p>
-        <Link className="doc-cta" href="/">
+        <Button size="doc" href="/">
           {t.backToMenu}
-        </Link>
+        </Button>
       </p>
     </LegalShell>
   );
@@ -205,9 +205,9 @@ export function MissingView() {
     <LegalShell title={t.missingTitle}>
       <p>{t.missingBody}</p>
       <p>
-        <Link className="doc-cta" href="/">
+        <Button size="doc" href="/">
           {t.backToMenu}
-        </Link>
+        </Button>
       </p>
     </LegalShell>
   );
