@@ -836,7 +836,7 @@
 .admin-activity-table-wrap { overflow: auto; max-height: min(70vh, 40rem); border: 1px solid var(--admin-c-eceef2); background: var(--color-white); }
 .admin-activity-table { width: 100%; border-collapse: collapse; font-size: 11px; line-height: 1.2; }
 .admin-activity-table th, .admin-activity-table td { padding: 2px 6px; border-bottom: 1px solid var(--admin-c-eceef2); text-align: start; vertical-align: top; }
-.admin-activity-table th { font-weight: 650; background: #f3f1ec; position: sticky; top: 0; }
+.admin-activity-table th { font-weight: 650; background: var(--admin-c-f3f0eb); position: sticky; top: 0; }
 .admin-activity-table time { font-variant-numeric: tabular-nums; white-space: nowrap; color: var(--admin-c-7d8490); }
 .admin-activity-detail { color: var(--admin-c-7d8490); overflow-wrap: anywhere; }
 .admin-pager { display: flex; align-items: center; justify-content: center; gap: var(--space-12); margin-top: var(--space-8); }
@@ -1097,7 +1097,7 @@
 /* Punch is a working surface — pull it up under the topbar, no spare air. */
 .admin-workspace:has(.staff-punch) .admin-content { padding-top: var(--space-12); padding-bottom: var(--space-24); }
 .admin-workspace:has(.staff-punch) .admin-heading { margin-bottom: var(--space-8); min-height: 0; }
-.admin-workspace:has(.staff-punch) .admin-heading h1 { font-size: var(--text-18); letter-spacing: -0.3px; line-height: 1.2; }
+.admin-workspace:has(.staff-punch) .admin-heading h1 { font-size: var(--text-18); letter-spacing: 0; line-height: 1.2; }
 .staff-punch { display: grid; gap: var(--space-8); min-height: 0; }
 .staff-punch-bar { display: grid; grid-template-columns: minmax(140px, 180px) 1fr; gap: var(--space-8); align-items: end; }
 .staff-punch-bar:not(:has(.staff-punch-branch)) { grid-template-columns: 1fr; }
@@ -1136,11 +1136,11 @@
 .staff-punch-dish { min-height: 64px; display: flex; justify-content: space-between; gap: var(--space-8); align-items: center; text-align: start; padding: var(--space-10) var(--space-12); }
 .staff-punch-dish-name { font-weight: 650; font-size: var(--text-14); }
 .staff-punch-dish-price { font-variant-numeric: tabular-nums; color: var(--color-c-6b6258); }
-.staff-punch-cart { position: sticky; top: var(--space-10); display: grid; gap: var(--space-10); padding: var(--space-14); background: var(--color-white); border: 1px solid var(--admin-border, #ddd5c8); border-radius: 12px; transition: border-color 200ms ease, box-shadow 200ms ease; }
-.staff-punch-cart.is-sent { border-color: #7cbc8f; box-shadow: 0 0 0 3px color-mix(in srgb, #1f6b3a 18%, transparent); }
+.staff-punch-cart { position: sticky; top: var(--space-10); display: grid; gap: var(--space-10); padding: var(--space-14); background: var(--color-white); border: 1px solid var(--admin-border, var(--admin-c-ded6ca)); border-radius: 12px; transition: border-color var(--duration-ui) ease, box-shadow var(--duration-ui) ease; }
+.staff-punch-cart.is-sent { border-color: var(--admin-c-9fc5aa); box-shadow: 0 0 0 3px color-mix(in srgb, var(--admin-c-1f6b3a) 18%, transparent); }
 .staff-punch-cart h2 { margin: 0; font-size: var(--text-16); }
 .staff-punch-lines { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-8); max-height: 40vh; overflow: auto; }
-.staff-punch-lines li { display: flex; justify-content: space-between; gap: var(--space-8); align-items: start; padding-bottom: var(--space-8); border-bottom: 1px solid #eee6da; }
+.staff-punch-lines li { display: flex; justify-content: space-between; gap: var(--space-8); align-items: start; padding-bottom: var(--space-8); border-bottom: 1px solid var(--admin-c-eee7db); }
 .staff-punch-lines small { display: block; color: var(--color-c-6b6258); }
 .staff-punch-line-actions { display: grid; gap: var(--space-4); justify-items: end; }
 .staff-punch-empty { color: var(--color-c-6b6258); border: 0 !important; }
@@ -1153,9 +1153,9 @@
   margin: 0;
   padding: 10px 12px;
   border-radius: var(--radius-7);
-  background: #1f6b3a;
-  border: 1px solid #1f6b3a;
-  color: #fff;
+  background: var(--admin-c-1f6b3a);
+  border: 1px solid var(--admin-c-1f6b3a);
+  color: var(--color-white);
   font-weight: 700;
   text-align: center;
   animation: staff-punch-place-pop 320ms var(--ease-out, ease-out);
@@ -1170,7 +1170,7 @@
   .staff-punch-cart { transition: none; }
   .staff-punch-place.is-sent { animation: none; }
 }
-.staff-punch-sheet { position: fixed; inset: 0; background: rgba(20, 16, 12, 0.45); display: grid; place-items: end center; z-index: 40; padding: var(--space-12); }
+.staff-punch-sheet { position: fixed; inset: 0; background: color-mix(in srgb, var(--admin-c-17130f) 45%, transparent); display: grid; place-items: end center; z-index: 40; padding: var(--space-12); }
 .staff-punch-sheet-card { width: min(480px, 100%); max-height: min(92vh, 40rem); overflow: auto; background: var(--color-white); border-radius: 14px; padding: var(--space-12); display: grid; gap: 10px; }
 .staff-punch-sheet-card header { display: flex; justify-content: space-between; gap: var(--space-8); align-items: start; }
 .staff-punch-sheet-card h3 { margin: 0; font-size: var(--text-16); }
@@ -1181,17 +1181,17 @@
 .staff-punch-unit {
   width: 36px; height: 36px; min-width: 36px; min-height: 36px; padding: 0;
   display: grid; place-items: center; font-weight: 700; font-size: var(--text-13);
-  border: 1px solid #ddd5c8; background: #f3f1ec; border-radius: 8px;
+  border: 1px solid var(--admin-c-ded6ca); background: var(--admin-c-f3f0eb); border-radius: 8px;
 }
 .staff-punch-unit.is-on { background: var(--color-c-8b2025); border-color: var(--color-c-8b2025); color: var(--color-white); }
-.staff-punch-unit.is-warn:not(.is-on) { border-color: #c45b2c; color: #c45b2c; }
+.staff-punch-unit.is-warn:not(.is-on) { border-color: var(--admin-c-c03546); color: var(--admin-c-c03546); }
 .staff-punch-options { display: grid; gap: 4px; }
 .staff-punch-options > p { margin: 0; font-size: 11px; color: var(--color-c-6b6258); font-weight: 650; }
 .staff-punch-opts { display: flex; flex-wrap: wrap; gap: 6px; }
 .staff-punch-opt {
   min-height: 36px; height: auto; padding: 6px 10px; margin: 0;
   display: inline-flex; align-items: center; gap: 6px;
-  border: 1px solid #ddd5c8; background: #fff; border-radius: 8px;
+  border: 1px solid var(--admin-c-ded6ca); background: var(--color-white); border-radius: 8px;
   font-size: var(--text-12); font-weight: 550; line-height: 1.15;
 }
 .staff-punch-opt em { font-style: normal; font-variant-numeric: tabular-nums; color: var(--color-c-6b6258); font-size: 11px; }
@@ -1250,9 +1250,9 @@
   gap: 8px;
   width: min(100%, 20rem);
   padding: 10px;
-  border: 1px solid #ddd5c8;
+  border: 1px solid var(--admin-c-ded6ca);
   border-radius: 12px;
-  background: #fff;
+  background: var(--color-white);
 }
 .staff-tender-due {
   display: flex;
@@ -1276,8 +1276,8 @@
   font-size: var(--text-14);
   font-weight: 650;
   border-radius: 10px;
-  background: #f3f1ec;
-  border: 1px solid #ddd5c8;
+  background: var(--admin-c-f3f0eb);
+  border: 1px solid var(--admin-c-ded6ca);
 }
 .admin .staff-tender-modes .staff-tender-pay {
   background: var(--accent);
