@@ -134,7 +134,8 @@ test('pay at pickup completion records payment atomically and sets retention',as
 test('mock settlement is server-side, idempotent and publishes one event/outbox row',async()=>{
   const session=randomUUID();const order=await repository.persistPendingOrder(session,randomUUID(),'same',snapshot,1,'mock');
   assert.ok(!(await orders.listOrders(admin, orderQuery.parse({limit:100}))).rows.some(o=>o.id===order.id));
-  await rejected(orders.transitionOrder(admin, order.id,{expected:'placed',to:'accepted'},ctx),'STALE_STATUS');
+  // Unpaid mock is outside CMS kitchen visibility — staff transitions must not see it.
+  await rejected(orders.transitionOrder(admin, order.id,{expected:'placed',to:'accepted'},ctx),'NOT_FOUND');
   const settled=await Promise.all(Array.from({length:5},()=>orders.payMock(order.id,session)));assert.ok(settled.every(r=>r.paymentStatus==='paid'));
   assert.equal(await countAudit(order.id),1);
   for(const table of ['order_outbox','order_events']) assert.equal(Number((await db.execute({sql:`SELECT COUNT(*) AS n FROM ${table} WHERE order_id=?`,args:[order.id]})).rows[0].n),1);
