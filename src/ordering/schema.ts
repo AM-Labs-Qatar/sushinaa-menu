@@ -104,6 +104,19 @@ export const ORDER_SURFACE_SQL = [
   `CREATE INDEX IF NOT EXISTS orders_surface_branch ON orders(branch_id, order_surface)`,
 ];
 
+/** Keep identical to db/migrations/0012_staff_pos.sql. */
+export const STAFF_POS_SQL = [
+  `ALTER TABLE orders ADD COLUMN created_by TEXT`,
+  `CREATE TABLE IF NOT EXISTS order_tenders (
+  id TEXT PRIMARY KEY,
+  order_id TEXT NOT NULL REFERENCES orders(id),
+  kind TEXT NOT NULL CHECK (kind IN ('cash', 'card')),
+  amount_minor INTEGER NOT NULL CHECK (amount_minor > 0),
+  created_at TEXT NOT NULL
+)`,
+  `CREATE INDEX IF NOT EXISTS order_tenders_order ON order_tenders(order_id)`,
+];
+
 /** Keep identical to db/migrations/0009_coupons.sql. */
 export const COUPONS_SQL = [
   `CREATE TABLE IF NOT EXISTS coupons (

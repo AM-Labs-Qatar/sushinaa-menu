@@ -73,6 +73,45 @@ export function branchStatus(hours: WeekHours, { day, minute }: QatarClock, lang
   return {open:false,soon:false,label:lang==='ar'?'مغلق':'Closed',hours:lang==='ar'?'مغلق':'Closed',tomorrow:false};
 }
 
+/**
+ * Staff POS punch window: published hours expanded by ±graceMinutes on both sides.
+ * Customer checkout still uses `branchStatus(...).open` with no grace.
+ */
+export function staffOrderingOpen(
+  hours: WeekHours,
+  clock: QatarClock,
+  graceMinutes = 60,
+): boolean {
+  if (branchStatus(hours, clock).open) return true;
+  const { day, minute } = clock;
+  const yesterday = hours[(day + 6) % 7];
+  const today = hours[day];
+  if (!yesterday.closed) {
+    if (yesterday.close > 1440) {
+      const close = yesterday.close - 1440 + graceMinutes;
+      if (minute < close) return true;
+    } else {
+      // Same-calendar-day close (e.g. 23:30) whose grace spills past midnight.
+      const spill = yesterday.close + graceMinutes - 1440;
+      if (spill > 0 && minute < spill) return true;
+    }
+  }
+  if (!today.closed) {
+    const open = Math.max(0, today.open - graceMinutes);
+    const close = Math.min(2879, today.close + graceMinutes);
+    if (minute >= open && minute < close) return true;
+    // Early open grace before midnight on the previous calendar day:
+    if (today.open < graceMinutes && minute >= 1440 + today.open - graceMinutes) return true;
+  }
+  // Grace into tomorrow's early open after today's close.
+  const tomorrow = hours[(day + 1) % 7];
+  if (!tomorrow.closed && tomorrow.open <= graceMinutes) {
+    const wrap = 1440 + tomorrow.open - graceMinutes;
+    if (minute >= wrap) return true;
+  }
+  return false;
+}
+
 /** "Down Town, open now, today 12pm to 2:30am". */
 export function accessibleName(name: string, status: BranchStatus, lang: Lang = "en"): string {
   if (lang === "ar") return `${name}، ${status.label}، ${status.dayLabel ?? (status.tomorrow ? "غدًا" : "اليوم")} ${status.hours.replace(RANGE_DASH, " إلى ")}`;

@@ -6,6 +6,7 @@ import { publicMenu } from "@/cms/schema";
 import { MenuFeed } from "@/components/menu/MenuFeed";
 import { OrderingExperience } from "@/components/checkout/OrderingExperience";
 import { orderingEnabled } from "@/ordering/config";
+import { menuHasOrderingMode } from "@/branches/ordering-modes";
 import { currentStorefront } from "@/storefront/server";
 import { pageMeta } from "@/lib/page-meta";
 import "../order/order.css";
@@ -40,7 +41,9 @@ export default async function BranchMenu({ params }: Props) {
   const { menu } = await getMenu();
   const published = publicMenu(menu, storefront.channel);
   const canOrder =
-    storefront.mode === "pickup" && orderingEnabled(branch.slug);
+    storefront.mode === "pickup"
+    && orderingEnabled(branch.slug)
+    && menuHasOrderingMode(menu.branches, branch.slug, "pickup");
   if (canOrder) {
     return (
       <MenuProvider menu={published}>

@@ -16,6 +16,7 @@ export const NEVER_PROMOTE_TABLES = [
   "order_outbox",
   "order_edits",
   "order_adjustments",
+  "order_tenders",
   "sessions",
   "staff_sessions",
   "staff_users",

@@ -13,6 +13,7 @@ import { useNotify } from './Notices';
 import { StatusBadge } from './StatusBadge';
 import { closeLiveDetailOnRefresh } from '@/ordering/live-detail-close';
 import { allowedTransitions, staffStatus, staffLabels, terminalStatuses, type OrderStatus } from '@/ordering/status';
+import { parseSplitCashMajor, sanitizeCashMajorInput, singleTender, type TenderLine } from '@/ordering/counter-tender';
 import { formatQatarDateTime } from '@/lib/datetime';
 import { formatMinor } from '@/lib/money';
 import { formatOrderNumber } from '@/ordering/order-number';
@@ -51,6 +52,9 @@ export function OrderDetail({ id, onBack, onChange, role, menu, refreshKey=0, cl
   const [busy, setBusy] = useState(false);
   const [cancel, setCancel] = useState(false);
   const [reason, setReason] = useState<typeof cancellationReasons[number]>('customer_request');
+  const [tenderOpen, setTenderOpen] = useState(false);
+  const [tenderMode, setTenderMode] = useState<'cash' | 'card' | 'split'>('cash');
+  const [cashMajor, setCashMajor] = useState('');
   async function load() {
     const response = await fetch(`/api/admin/orders/${id}`, { cache: 'no-store' });
     const body = await response.json();
@@ -102,13 +106,37 @@ export function OrderDetail({ id, onBack, onChange, role, menu, refreshKey=0, cl
     const body = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(body.code === 'STALE_STATUS' ? 'STALE_STATUS' : 'UPDATE_FAILED');
   }
-  async function change(to: OrderStatus) {
+  function tendersForCollect(): TenderLine[] | null {
+    if (!data) return null;
+    if (tenderMode === 'cash' || tenderMode === 'card') return singleTender(tenderMode, data.totalMinor);
+    const parsed = parseSplitCashMajor(cashMajor, data.totalMinor);
+    if (!parsed.ok) return null;
+    return [
+      { kind: 'cash', amountMinor: parsed.cashMinor },
+      { kind: 'card', amountMinor: parsed.cardMinor },
+    ];
+  }
+
+  const splitParse = data && tenderMode === 'split' ? parseSplitCashMajor(cashMajor, data.totalMinor) : null;
+  const splitHint = !splitParse || splitParse.ok || !cashMajor.trim() ? ''
+    : splitParse.reason === 'invalid' ? text('Enter a valid amount (up to 2 decimals).', 'أدخل مبلغاً صحيحاً (حتى منزلتين عشريتين).')
+    : splitParse.reason === 'too_small' ? text('Cash must be more than 0.', 'يجب أن يكون النقد أكبر من ٠.')
+    : text('Cash must be less than the total so card can take the rest.', 'يجب أن يكون النقد أقل من الإجمالي حتى تأخذ البطاقة الباقي.');
+
+  async function change(to: OrderStatus, extra: Record<string, unknown> = {}) {
     if (!data || busy) return;
+    if (to === 'completed' && data.tendersRequired && !extra.tenders) {
+      setTenderOpen(true);
+      setTenderMode('cash');
+      setCashMajor('');
+      return;
+    }
     setBusy(true); setError('');
     try {
       await postStatus(to, data.status, {
         ...(to === 'completed' && data.paymentMethod === 'pay_at_pickup' ? { recordPayment: true } : {}),
         ...(to === 'cancelled' ? { reason } : {}),
+        ...extra,
       });
       let shown: OrderStatus = to;
       if (to === 'accepted') {
@@ -118,9 +146,39 @@ export function OrderDetail({ id, onBack, onChange, role, menu, refreshKey=0, cl
       }
       notify({ tone: 'ok', text: text('Order updated', 'تم تحديث الطلب') + ` · ${staffLabels[staffStatus(shown)][lang]}` });
       setCancel(false);
+      setTenderOpen(false);
       if (closeOnTerminal && (terminalStatuses as readonly string[]).includes(to)) { onBack(); onChange(); return; }
       await load(); onChange();
     } catch (e) { setError(e instanceof Error && e.message === 'STALE_STATUS' ? 'STALE_STATUS' : e instanceof Error && e.message === 'PRINT_FAILED' ? 'PRINT_FAILED' : 'UPDATE_FAILED'); await load(); }
+    finally { setBusy(false); }
+  }
+
+  async function collectWithTender(tenders?: TenderLine[]) {
+    const lines = tenders ?? tendersForCollect();
+    if (!lines) {
+      setError('UPDATE_FAILED');
+      return;
+    }
+    await change('completed', { tenders: lines });
+  }
+
+  async function collectAll(kind: 'cash' | 'card') {
+    if (!data) return;
+    setTenderMode(kind);
+    await collectWithTender(singleTender(kind, data.totalMinor));
+  }
+
+  async function settleCashBack(adjustmentId: string) {
+    if (busy) return;
+    setBusy(true); setError('');
+    try {
+      const response = await fetch(`/api/admin/orders/${id}/adjustments/${adjustmentId}/settle`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}',
+      });
+      if (!response.ok) throw new Error('UPDATE_FAILED');
+      notify({ tone: 'ok', text: text('Cash return recorded', 'تم تسجيل إرجاع النقد') });
+      await load(); onChange();
+    } catch { setError('UPDATE_FAILED'); }
     finally { setBusy(false); }
   }
   const branch = branches.find(b => b.slug === data?.branchId);
@@ -137,32 +195,111 @@ export function OrderDetail({ id, onBack, onChange, role, menu, refreshKey=0, cl
     {data && <>
       <header className="ops-detail-heading">
         <div className="ops-detail-title">
-          <h2 dir="ltr">#{formatOrderNumber(data.orderNumber)} · {data.currentLines.reduce((n,l)=>n+l.quantity,0)} {text('item(s)','صنف')} · {text('Car collection','استلام بالسيارة')}</h2>
+          <h2 dir="ltr">#{formatOrderNumber(data.orderNumber)} · {data.currentLines.reduce((n,l)=>n+l.quantity,0)} {text('item(s)','صنف')} · {data.orderSurface==='staff'?text('Staff POS','نقطة بيع الموظفين'):text('Car collection','استلام بالسيارة')}</h2>
           <StatusBadge status={staffStatus(data.status)}>{staffLabels[staffStatus(data.status)][lang]}</StatusBadge>
         </div>
         <p className="ops-detail-sub">{[branchName,timingLine].filter(Boolean).join(' · ')}</p>
         {data.arrivedAt && <p className="ops-arrived-banner" role="status">{text('Customer has arrived for pickup', 'وصل العميل للاستلام')}</p>}
       </header>
       <section className="kitchen-actions-band ops-detail-actions-top" aria-label={text('Actions', 'إجراءات')}>
-        <div className="kitchen-actions">
-          {(data.status === 'placed' || data.status === 'paid') && <button type="button" className="primary accept-order" disabled={busy} onClick={() => void change('accepted')}>{text('Accept order', 'قبول الطلب')}</button>}
-          {allowedTransitions(data.status, data.paidAt).filter((to) => to !== 'cancelled' && to !== 'refunded' && to !== 'accepted' && staffStatus(to) !== staffStatus(data.status)).slice(0, 1).map((to) => <button key={to} type="button" className="primary accept-order" disabled={busy} onClick={() => void change(to)}>
-            {to === 'completed' && data.paymentMethod === 'pay_at_pickup' ? text('Mark paid & collected', 'تأكيد الدفع والاستلام') : staffLabels[staffStatus(to)][lang]}
-          </button>)}
-          <button type="button" className="ticket-print" disabled={busy} onClick={() => void printNow(data.printCount > 0 ? 'reprint' : 'manual')}>{text(data.printCount > 0 ? 'Reprint ticket' : 'Print ticket', data.printCount > 0 ? 'إعادة طباعة التذكرة' : 'طباعة التذكرة')}</button>
-          {role === 'admin' && allowedTransitions(data.status, data.paidAt).includes('refunded') && <button type="button" disabled={busy} onClick={() => void change('refunded')}>{text('Refund', 'استرداد')}</button>}
-          {allowedTransitions(data.status, data.paidAt).includes('cancelled') && <button type="button" className="danger" disabled={busy} onClick={() => setCancel(true)}>{text('Cancel', 'إلغاء')}</button>}
+        <div className="staff-action-bar">
+          <div className="staff-action-main">
+            {(data.status === 'placed' || data.status === 'paid') && (
+              <button type="button" className="primary accept-order staff-action-slot" disabled={busy} onClick={() => void change('accepted')}>{text('Accept order', 'قبول الطلب')}</button>
+            )}
+            {data.status === 'preparing' && (
+              <button type="button" className="primary accept-order staff-action-slot" disabled={busy} onClick={() => void change('ready')}>{text('Mark ready', 'جاهز')}</button>
+            )}
+            {data.tendersRequired && !tenderOpen && (
+              <button type="button" className="primary accept-order staff-action-slot" disabled={busy} onClick={() => { setTenderOpen(true); setTenderMode('cash'); setCashMajor(''); }}>
+                {text('Collect payment', 'تحصيل الدفع')} · <span dir="ltr">{formatMinor(data.totalMinor, lang)}</span>
+              </button>
+            )}
+            {!data.tendersRequired && data.status === 'ready' && data.paymentMethod === 'pay_at_pickup' && (
+              <button type="button" className="primary accept-order staff-action-slot" disabled={busy} onClick={() => void change('completed')}>{text('Mark paid & collected', 'تأكيد الدفع والاستلام')}</button>
+            )}
+            {!data.tendersRequired && data.status === 'ready' && Boolean(data.paidAt) && (
+              <button type="button" className="primary accept-order staff-action-slot" disabled={busy} onClick={() => void change('completed')}>{staffLabels.collected[lang]}</button>
+            )}
+            {tenderOpen && data.tendersRequired && (
+              <div className="staff-tender-panel" role="group" aria-label={text('Collect payment', 'تحصيل الدفع')}>
+                <div className="staff-tender-due">
+                  <span>{text('Amount due', 'المبلغ المستحق')}</span>
+                  <strong dir="ltr">{formatMinor(data.totalMinor, lang)}</strong>
+                </div>
+                {data.totalMinor === 0 ? (
+                  <div className="staff-tender-modes">
+                    <button type="button" className="staff-tender-pay" disabled={busy} onClick={() => void collectWithTender([])}>{text('Collect · nothing due', 'تحصيل · لا مستحق')}</button>
+                    <button type="button" disabled={busy} onClick={() => setTenderOpen(false)}>{text('Back', 'رجوع')}</button>
+                  </div>
+                ) : tenderMode !== 'split' ? (
+                  <div className="staff-tender-modes">
+                    <button type="button" className="staff-tender-pay" disabled={busy} onClick={() => void collectAll('cash')}>{text('Cash', 'نقد')}</button>
+                    <button type="button" className="staff-tender-pay" disabled={busy} onClick={() => void collectAll('card')}>{text('Card', 'بطاقة')}</button>
+                    <button type="button" disabled={busy} onClick={() => { setTenderMode('split'); setCashMajor(''); }}>{text('Split', 'تقسيم')}</button>
+                    <button type="button" disabled={busy} onClick={() => setTenderOpen(false)}>{text('Back', 'رجوع')}</button>
+                  </div>
+                ) : (
+                  <div className="staff-tender-split">
+                    <label>{text('Cash portion', 'جزء النقد')}
+                      <input
+                        inputMode="decimal"
+                        value={cashMajor}
+                        disabled={busy}
+                        autoFocus
+                        placeholder={(data.totalMinor / 100).toFixed(2)}
+                        aria-invalid={Boolean(splitHint)}
+                        aria-describedby={splitHint ? 'staff-tender-split-hint' : 'staff-tender-split-card'}
+                        onChange={(e) => setCashMajor(sanitizeCashMajorInput(e.target.value))}
+                      />
+                    </label>
+                    {splitHint
+                      ? <p id="staff-tender-split-hint" className="staff-tender-split-error" role="alert">{splitHint}</p>
+                      : <p id="staff-tender-split-card" className="staff-tender-split-card" dir="ltr">
+                          {text('Card', 'بطاقة')}{' '}
+                          {formatMinor(splitParse?.ok ? splitParse.cardMinor : data.totalMinor, lang)}
+                        </p>}
+                    <div className="staff-tender-modes">
+                      <button type="button" className="staff-tender-pay" disabled={busy || !splitParse?.ok} onClick={() => void collectWithTender()}>{text('Confirm', 'تأكيد')}</button>
+                      <button type="button" disabled={busy} onClick={() => { setTenderMode('cash'); setCashMajor(''); }}>{text('Back', 'رجوع')}</button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+          <div className="staff-action-tools">
+            <button type="button" className="ticket-print" disabled={busy} onClick={() => void printNow(data.printCount > 0 ? 'reprint' : 'manual')}>{text(data.printCount > 0 ? 'Reprint ticket' : 'Print ticket', data.printCount > 0 ? 'إعادة طباعة التذكرة' : 'طباعة التذكرة')}</button>
+            {role === 'admin' && allowedTransitions(data.status, data.paidAt).includes('refunded') && <button type="button" disabled={busy} onClick={() => void change('refunded')}>{text('Refund', 'استرداد')}</button>}
+            {allowedTransitions(data.status, data.paidAt).includes('cancelled') && <button type="button" className="danger" disabled={busy} onClick={() => setCancel(true)}>{text('Cancel', 'إلغاء')}</button>}
+          </div>
         </div>
       </section>
       <article className="kitchen-sheet">
         <section className="kitchen-who staff-detail-head">
           <h3>{text('Collection details', 'بيانات الاستلام')}</h3>
           <dl className="kitchen-facts">
-            <div><dt>{text('Name', 'الاسم')}</dt><dd>{data.customer.name || '—'}</dd></div>
-            <div><dt>{text('Phone', 'الجوال')}</dt><dd dir="ltr">{nationalPhone(data.customer.phone).length===8?<a className="ops-customer-call" href={`tel:+974${nationalPhone(data.customer.phone)}`}>{spacedPhone(data.customer.phone)}</a>:spacedPhone(data.customer.phone)||'—'}</dd></div>
+            {data.orderSurface !== 'staff' && <div><dt>{text('Name', 'الاسم')}</dt><dd>{data.customer.name || '—'}</dd></div>}
+            {data.orderSurface !== 'staff' && <div><dt>{text('Phone', 'الجوال')}</dt><dd dir="ltr">{nationalPhone(data.customer.phone).length===8?<a className="ops-customer-call" href={`tel:+974${nationalPhone(data.customer.phone)}`}>{spacedPhone(data.customer.phone)}</a>:spacedPhone(data.customer.phone)||'—'}</dd></div>}
             <div><dt>{text('Plate', 'اللوحة')}</dt><dd dir="ltr">{data.customer.plate}</dd></div>
-            <div><dt>{text('Payment', 'الدفع')}</dt><dd><span className={`ops-pay-badge ${data.paymentMethod === 'mock' || data.paidAt ? 'is-paid' : 'is-pickup'}`}>{data.paymentMethod === 'mock' || data.paidAt ? text('Paid', 'مدفوع') : text('Pay at pickup', 'الدفع عند الاستلام')}</span></dd></div>
-            {(data.customer.colour || data.customer.brand || data.customer.car) && <div className="ops-fact-vehicle"><dt>{text('Vehicle', 'السيارة')}</dt><dd><span className="ops-detail-car"><CarBrandLogo brand={findCarBrand(data.brandId??'')}/><span>{[data.customer.colour,carBrandName(data.brandId??'',lang)||data.customer.brand,data.customer.car].filter(Boolean).join(' ')}</span></span></dd></div>}
+            <div><dt>{text('Payment', 'الدفع')}</dt><dd><span className={`ops-pay-badge ${
+              !data.paidAt ? 'is-pickup'
+                : data.paymentMethod === 'cash' ? 'is-cash'
+                : data.paymentMethod === 'card' ? 'is-card'
+                : data.paymentMethod === 'split' ? 'is-split'
+                : 'is-paid'
+            }`}>{
+              data.paidAt
+                ? data.paymentMethod === 'cash' ? text('Cash collected', 'تم نقداً')
+                  : data.paymentMethod === 'card' ? text('Card collected', 'تم بالبطاقة')
+                  : data.paymentMethod === 'split' ? text('Split collected', 'تم مقسّماً')
+                  : text('Paid', 'مدفوع')
+                : data.tendersRequired ? text('Pay at counter', 'الدفع عند الكاونتر')
+                : data.paymentMethod === 'pay_at_pickup' ? text('Pay at pickup', 'الدفع عند الاستلام')
+                : text('Unpaid', 'غير مدفوع')
+            }</span>{data.tenders.length>0&&<small>{data.tenders.map(t=>`${t.kind==='cash'?text('Cash','نقد'):text('Card','بطاقة')} ${formatMinor(t.amountMinor,lang)}`).join(' · ')}</small>}</dd></div>
+            {data.createdBy && <div><dt>{text('Created by', 'أنشأه')}</dt><dd>{data.createdBy}</dd></div>}
+            {data.orderSurface !== 'staff' && (data.customer.colour || data.customer.brand || data.customer.car) && <div className="ops-fact-vehicle"><dt>{text('Vehicle', 'السيارة')}</dt><dd><span className="ops-detail-car"><CarBrandLogo brand={findCarBrand(data.brandId??'')}/><span>{[data.customer.colour,carBrandName(data.brandId??'',lang)||data.customer.brand,data.customer.car].filter(Boolean).join(' ')}</span></span></dd></div>}
             {data.customer.instructions && <div className="ops-fact-wide"><dt>{text('Instructions', 'التعليمات')}</dt><dd>{data.customer.instructions}</dd></div>}
           </dl>
         </section>
@@ -183,6 +320,13 @@ export function OrderDetail({ id, onBack, onChange, role, menu, refreshKey=0, cl
             <p className="kitchen-item"><span>{text('Coupon', 'قسيمة')} <span dir="ltr">{coupon.code}</span></span><span dir="ltr">{formatMinor(-coupon.discountMinor, lang)}</span></p>
           </>}
           <p className="kitchen-total"><span>{text('Total', 'الإجمالي')}</span><strong dir="ltr">{formatMinor(data.totalMinor, lang)}</strong></p>
+          {data.owedBackMinor > 0 && <p className="kitchen-item"><span>{text('Owed back', 'المبلغ المسترد')}</span><span dir="ltr">{formatMinor(data.owedBackMinor, lang)}</span></p>}
+          {data.adjustments.some((row) => !row.settledAt) && <ul className="staff-adjustments">{data.adjustments.filter((row) => !row.settledAt).map((row) => (
+            <li key={row.id}>
+              <span dir="ltr">{formatMinor(row.amountMinor, lang)}</span>
+              <button type="button" disabled={busy} onClick={() => void settleCashBack(row.id)}>{text('Cash returned', 'تم إرجاع النقد')}</button>
+            </li>
+          ))}</ul>}
         </section>
         <section className="ops-detail-secondary">
           <details className="order-edit-fold"><summary>{text('Edit order', 'تعديل الطلب')}</summary>

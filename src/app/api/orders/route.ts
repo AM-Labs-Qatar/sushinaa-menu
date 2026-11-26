@@ -4,6 +4,7 @@ import { checkoutSchema } from '@/ordering/checkout/validation';
 import { quoteOrder } from '@/ordering/checkout/quote';
 import { checkoutRequestHash, existingOrder, persistPendingOrder, customerOrder } from '@/ordering/checkout/repository';
 import { orderingEnabled } from '@/ordering/config';
+import { menuHasOrderingMode } from '@/branches/ordering-modes';
 import { reply, failure, provider, writeAccess, jsonBody, OrderError } from '@/ordering/http';
 import { orderSession } from '@/ordering/session';
 import { rateAllowed } from '@/ordering/rate-limit';
@@ -41,6 +42,7 @@ export async function POST(request: Request) {
     const previous = await existingOrder(session, key, requestHash);
     if (previous) return reply({ ...await customerOrder(previous.id, session), reused: true });
     const { menu, revision } = await readMenu();
+    if (!menuHasOrderingMode(menu.branches, parsed.branchId, 'pickup')) throw new OrderError('BRANCH_UNAVAILABLE', 409);
     const snapshot = await quoteOrder(parsed, menu, new Date());
     const surface = orderSurfaceFromStorefront(storefront.mode);
     const order = await persistPendingOrder(session, key, requestHash, snapshot, revision, method, surface);

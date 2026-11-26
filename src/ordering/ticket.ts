@@ -10,6 +10,7 @@ import type { Selection } from '@/catalog/types';
 import { applyEdits, linesFromSnapshot, type ResolvedEdit } from '@/ordering/edits';
 import {
   isOrderSurface,
+  kitchenChannelLabel,
   kitchenFulfilmentLabel,
   ORDER_SURFACE_PICKUP,
 } from '@/ordering/surface';
@@ -33,6 +34,7 @@ export type TicketModel = {
   orderNumber: string;
   id: string;
   placed: string;
+  channel: string;
   fulfilment: string;
   car: string;
   brand: string;
@@ -168,24 +170,37 @@ export function ticketModel(row: DbRow, edits: ResolvedEdit[] = []): TicketModel
   }
   const surface = isOrderSurface(row.order_surface) ? row.order_surface : ORDER_SURFACE_PICKUP;
   const restaurant = surface === 'restaurant';
-  // Car details are for CMS car-collection tickets only — not restaurant / POS.
+  const staff = surface === 'staff';
+  // Car brand/colour are pickup-only. Staff tickets keep plate only.
   const car = restaurant || typeof row.car_plate !== 'string' ? '' : row.car_plate;
-  const brand = restaurant || removed ? '' : carBrandName(snapshot.customer?.brand);
-  const vehicle = restaurant
+  const brand = restaurant || staff || removed ? '' : carBrandName(snapshot.customer?.brand);
+  const vehicle = restaurant || staff
     ? ''
     : [row.car_colour, row.car_model].filter((part) => typeof part === 'string' && part).join(' · ');
   const printCount = Number(row.print_count ?? 0);
+  // Staff punches store empty name/phone — not a GDPR purge (null/null → "removed").
+  const customer = staff
+    ? ''
+    : removed
+      ? 'removed'
+      : (typeof row.customer_name === 'string' && row.customer_name ? row.customer_name : 'removed');
+  const phone = staff
+    ? ''
+    : removed
+      ? 'removed'
+      : nationalPhone(String(row.customer_phone ?? ''));
   return {
     branchName: snapshot.branchName || 'Sushinaa',
     orderNumber: formatOrderNumber(row.order_number == null ? '' : Number(row.order_number)),
     id: String(row.id),
     placed: qatarTime(String(row.created_at)),
+    channel: kitchenChannelLabel(surface),
     fulfilment: kitchenFulfilmentLabel(surface),
     car,
     brand,
     vehicle,
-    customer: removed ? 'removed' : (typeof row.customer_name === 'string' && row.customer_name ? row.customer_name : 'removed'),
-    phone: removed ? 'removed' : nationalPhone(String(row.customer_phone ?? '')),
+    customer,
+    phone,
     groups: [...groups.entries()]
       .sort((a, b) => a[1].order - b[1].order)
       .map(([name, group]) => ({ name, lines: group.lines })),

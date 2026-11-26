@@ -36,7 +36,7 @@ async function countAudit(id:string) {return Number((await db.execute({sql:"SELE
 const rejected = async (promise:Promise<unknown>, code:string) => assert.rejects(promise, (e:unknown) => e instanceof Error && e.message === code);
 
 test('every allowed and forbidden status transition', () => {
-  const permitted = new Set(['placed:accepted','placed:cancelled','paid:accepted','paid:cancelled','accepted:preparing','accepted:cancelled','preparing:ready','preparing:cancelled','ready:completed','ready:cancelled','cancelled:refunded']);
+  const permitted = new Set(['placed:accepted','placed:cancelled','paid:accepted','paid:cancelled','accepted:preparing','accepted:cancelled','preparing:ready','preparing:completed','preparing:cancelled','ready:completed','ready:cancelled','cancelled:refunded']);
   for(const from of statuses) for(const to of statuses) {
     assert.equal(canTransition(from,to,'paid'),permitted.has(`${from}:${to}`),`${from}:${to}`);
     assert.equal(canTransition(from,to,null),permitted.has(`${from}:${to}`) && to !== 'refunded');
@@ -126,7 +126,7 @@ test('db failure mid-transition leaves no partial state',async()=>{
 test('pay at pickup completion records payment atomically and sets retention',async()=>{
   const order=await create();
   for(const [expected,to] of [['placed','accepted'],['accepted','preparing'],['preparing','ready']] as [OrderStatus,OrderStatus][]) await orders.transitionOrder(admin, order.id,{expected,to},ctx);
-  await rejected(orders.transitionOrder(admin, order.id,{expected:'ready',to:'completed'},ctx),'STALE_STATUS');
+  await rejected(orders.transitionOrder(admin, order.id,{expected:'ready',to:'completed'},ctx),'INVALID_TRANSITION');
   assert.equal((await row(order.id)).paid_at,null);
   const at=new Date('2026-10-23T12:00:00Z');await orders.transitionOrder(admin, order.id,{expected:'ready',to:'completed',recordPayment:true},ctx,at);
   const done=await row(order.id);assert.equal(done.paid_at,at.toISOString());assert.equal(Date.parse(String(done.purge_after))-at.getTime(),90*86400000);
@@ -134,7 +134,8 @@ test('pay at pickup completion records payment atomically and sets retention',as
 test('mock settlement is server-side, idempotent and publishes one event/outbox row',async()=>{
   const session=randomUUID();const order=await repository.persistPendingOrder(session,randomUUID(),'same',snapshot,1,'mock');
   assert.ok(!(await orders.listOrders(admin, orderQuery.parse({limit:100}))).rows.some(o=>o.id===order.id));
-  await rejected(orders.transitionOrder(admin, order.id,{expected:'placed',to:'accepted'},ctx),'STALE_STATUS');
+  // Unpaid mock is outside CMS kitchen visibility — staff transitions must not see it.
+  await rejected(orders.transitionOrder(admin, order.id,{expected:'placed',to:'accepted'},ctx),'NOT_FOUND');
   const settled=await Promise.all(Array.from({length:5},()=>orders.payMock(order.id,session)));assert.ok(settled.every(r=>r.paymentStatus==='paid'));
   assert.equal(await countAudit(order.id),1);
   for(const table of ['order_outbox','order_events']) assert.equal(Number((await db.execute({sql:`SELECT COUNT(*) AS n FROM ${table} WHERE order_id=?`,args:[order.id]})).rows[0].n),1);

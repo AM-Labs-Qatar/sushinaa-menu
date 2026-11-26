@@ -1,9 +1,18 @@
 export const statuses = ['placed', 'paid', 'accepted', 'preparing', 'ready', 'completed', 'cancelled', 'refunded'] as const;
 export type OrderStatus = typeof statuses[number];
-export type PaymentMethod = 'pay_at_pickup' | 'mock' | 'sadad';
+export type PaymentMethod =
+  | 'pay_at_pickup'
+  | 'mock'
+  | 'sadad'
+  | 'counter'
+  | 'cash'
+  | 'card'
+  | 'split';
 const next: Record<OrderStatus, readonly OrderStatus[]> = {
   placed: ['accepted', 'cancelled'], paid: ['accepted', 'cancelled'],
-  accepted: ['preparing', 'cancelled'], preparing: ['ready', 'cancelled'],
+  accepted: ['preparing', 'cancelled'],
+  // completed from preparing = collect payment before / without Mark ready (staff counter).
+  preparing: ['ready', 'completed', 'cancelled'],
   ready: ['completed', 'cancelled'], cancelled: ['refunded'], completed: [], refunded: [],
 };
 export function isTransitionEdge(from: OrderStatus, to: OrderStatus) {

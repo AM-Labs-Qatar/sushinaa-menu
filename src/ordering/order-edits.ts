@@ -132,3 +132,31 @@ export async function applyOrderEdit(scope: BranchScope, id: string, raw: unknow
   }
   return { totalMinor: after, lines: projected.lines, discounts: projected.discounts, cancelled };
 }
+
+/** Mark a cash-back adjustment settled (waiter returned cash). */
+export async function settleAdjustment(
+  scope: BranchScope,
+  orderId: string,
+  adjustmentId: string,
+  ctx: AuditContext,
+  now = new Date(),
+) {
+  await initOrders();
+  const branch = branchClause(scope);
+  const at = now.toISOString();
+  const result = await db.batch([
+    {
+      sql: `UPDATE order_adjustments SET settled_at=?
+        WHERE id=? AND order_id=? AND settled_at IS NULL
+          AND EXISTS (SELECT 1 FROM orders WHERE id=? AND ${branch.sql} AND ${CMS_KITCHEN})`,
+      args: [at, adjustmentId, orderId, orderId, ...branch.args],
+    },
+    afterChange(auditInsert(ctx, {
+      action: 'order.adjustment_settled',
+      entityType: 'order',
+      entityId: orderId,
+      diff: { adjustmentId, settledAt: at },
+    })),
+  ], 'write');
+  if (result[0].rowsAffected !== 1) throw new OrderError('NOT_FOUND', 404);
+}

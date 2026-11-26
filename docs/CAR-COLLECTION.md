@@ -14,6 +14,8 @@ Prices, availability and branch opening hours are checked server-side. Duplicate
 
 **Pickup kitchen is the CMS.** Car-collection orders on `order.sushinaa.qa` appear on authenticated `/admin` Orders — not on OXiPOS. OXiPOS pulls only from `menu.sushinaa.qa` (on-site; pay at the branch machine). See [`docs/OXIPOS.md`](OXIPOS.md).
 
+**Staff POS** (`order_surface = staff`) is a separate CMS punch path: tablet New order → preparing, collect with cash/card/split. Branch enablement is the `orderingModes` set on each branch in Admin → Branches (include `staff`). It shares the CMS Orders board (Pickup | Staff tabs) and never enters OXiPOS.
+
 The existing authenticated `/admin` shell has an Orders section with branch/status/date/search filters, 25-row pages, full customer contact for kitchen staff, the paper receipt and status history. Status writes use a conditional update and audit in one transaction; competing writes return `409 STALE_STATUS`. Pickup collection records payment in that same request. Cancellation uses fixed reason codes to keep personal information out of the audit label.
 
 Orders poll every 15 seconds while the tab is visible, including while another admin section is open. A badge counts unread orders. Staff can enable a bundled notification sound; their preference is stored locally. Browser autoplay restrictions may require enabling sound again after opening a new session. Existing menu-management flows are unchanged.

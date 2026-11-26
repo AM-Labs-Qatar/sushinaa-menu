@@ -6,7 +6,7 @@ export function Ticket({ model, logo }: { model: TicketModel; logo?: string }) {
     {model.amended && <p className="ticket-banner">AMENDED · <span lang="ar">معدّل</span></p>}
     {model.reprint && <p className="ticket-banner">{model.reprint}</p>}
     <ThermalBrand branchName={model.branchName} logo={logo} />
-    <ThermalWho number={model.orderNumber || model.id.slice(-8)} numberAttr={model.orderNumber} customer={model.customer} phone={model.phone} car={model.car} brand={model.brand} vehicle={model.vehicle} fulfilment={model.fulfilment} note={model.instructions} />
+    <ThermalWho number={model.orderNumber || model.id.slice(-8)} numberAttr={model.orderNumber} customer={model.customer} phone={model.phone} car={model.car} brand={model.brand} vehicle={model.vehicle} fulfilment={model.fulfilment} channel={model.channel} note={model.instructions} />
     <ThermalColumns />
     <ul>{model.groups.flatMap(group => group.lines).map((line, index) => <li key={index} className={`thermal-line${line.voided ? ' thermal-void' : ''}`}>
       <span>{line.quantity}</span>
