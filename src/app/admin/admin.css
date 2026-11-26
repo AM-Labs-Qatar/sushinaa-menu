@@ -1170,7 +1170,8 @@
   .staff-punch-cart { transition: none; }
   .staff-punch-place.is-sent { animation: none; }
 }
-.staff-punch-sheet { position: fixed; inset: 0; background: color-mix(in srgb, var(--admin-c-17130f) 45%, transparent); display: grid; place-items: center; z-index: 40; padding: var(--space-16); }
+/* Above --z-sidebar (50): otherwise the left of the sheet sits under the ops nav. */
+.staff-punch-sheet { position: fixed; inset: 0; background: color-mix(in srgb, var(--admin-c-17130f) 45%, transparent); display: grid; place-items: center; z-index: var(--z-viewer); padding: var(--space-16); }
 .staff-punch-sheet-card { width: min(480px, 100%); max-height: min(85dvh, 40rem); overflow: auto; background: var(--color-white); border-radius: 14px; padding: var(--space-12); display: grid; gap: 10px; align-content: start; }
 .staff-punch-sheet-card header { display: flex; justify-content: space-between; gap: var(--space-8); align-items: start; }
 .staff-punch-sheet-card h3 { margin: 0; font-size: var(--text-16); }
