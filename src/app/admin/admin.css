@@ -1131,8 +1131,8 @@
   color: var(--color-white);
   font-weight: 650;
 }
-.staff-punch-layout { display: grid; grid-template-columns: 1.4fr 0.9fr; gap: var(--space-12); align-items: start; }
-.staff-punch-catalog { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: var(--space-8); max-height: min(70vh, 720px); overflow: auto; }
+.staff-punch-layout { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(240px, 0.9fr); gap: var(--space-12); align-items: start; }
+.staff-punch-catalog { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: var(--space-8); max-height: min(70vh, 720px); overflow: auto; }
 .staff-punch-dish { min-height: 64px; display: flex; justify-content: space-between; gap: var(--space-8); align-items: center; text-align: start; padding: var(--space-10) var(--space-12); }
 .staff-punch-dish-name { font-weight: 650; font-size: var(--text-14); }
 .staff-punch-dish-price { font-variant-numeric: tabular-nums; color: var(--color-c-6b6258); }
@@ -1170,8 +1170,8 @@
   .staff-punch-cart { transition: none; }
   .staff-punch-place.is-sent { animation: none; }
 }
-.staff-punch-sheet { position: fixed; inset: 0; background: color-mix(in srgb, var(--admin-c-17130f) 45%, transparent); display: grid; place-items: end center; z-index: 40; padding: var(--space-12); }
-.staff-punch-sheet-card { width: min(480px, 100%); max-height: min(92vh, 40rem); overflow: auto; background: var(--color-white); border-radius: 14px; padding: var(--space-12); display: grid; gap: 10px; }
+.staff-punch-sheet { position: fixed; inset: 0; background: color-mix(in srgb, var(--admin-c-17130f) 45%, transparent); display: grid; place-items: center; z-index: 40; padding: var(--space-16); }
+.staff-punch-sheet-card { width: min(480px, 100%); max-height: min(85dvh, 40rem); overflow: auto; background: var(--color-white); border-radius: 14px; padding: var(--space-12); display: grid; gap: 10px; align-content: start; }
 .staff-punch-sheet-card header { display: flex; justify-content: space-between; gap: var(--space-8); align-items: start; }
 .staff-punch-sheet-card h3 { margin: 0; font-size: var(--text-16); }
 .staff-punch-sheet-price { margin: 2px 0 0; font-size: var(--text-14); font-weight: 700; font-variant-numeric: tabular-nums; }
@@ -1292,10 +1292,26 @@
 .staff-tender-split input[aria-invalid="true"] { border-color: var(--admin-c-a01725); outline: 2px solid color-mix(in srgb, var(--admin-c-a01725) 25%, transparent); }
 .staff-adjustments { list-style: none; margin: var(--space-8) 0 0; padding: 0; display: grid; gap: var(--space-6); }
 .staff-adjustments li { display: flex; justify-content: space-between; gap: var(--space-8); align-items: center; }
+/* Tablet punch (iPad portrait): keep catalog + cart side by side. */
+@media (max-width: 1100px) {
+  .staff-punch-layout { grid-template-columns: minmax(0, 1fr) minmax(220px, 260px); gap: var(--space-10); }
+  .staff-punch-catalog {
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    max-height: min(72dvh, 760px);
+  }
+  .staff-punch-dish { min-height: 56px; padding: var(--space-8) var(--space-10); }
+  .staff-punch-cats { gap: 4px; }
+  .staff-punch-cart { position: sticky; top: var(--space-8); max-height: min(78dvh, 820px); overflow: auto; }
+}
 @media (max-width: 900px) {
   .staff-punch-bar { grid-template-columns: 1fr; }
+}
+/* Phone only: stack cart under the menu. */
+@media (max-width: 640px) {
   .staff-punch-layout { grid-template-columns: 1fr; }
-  .staff-punch-cart { position: static; }
+  .staff-punch-cart { position: static; max-height: none; }
+  .staff-punch-sheet { place-items: end center; padding: var(--space-12); }
+  .staff-punch-sheet-card { width: min(480px, 100%); max-height: min(92vh, 40rem); }
 }
 .branch-editor-save { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-10); position: sticky; bottom: 0; padding: var(--space-10) 0; background: var(--admin-c-f5f4ef); }
 .branch-editor-save span { font-size: var(--text-12); color: var(--color-c-6b6258); }
