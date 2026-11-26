@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import localFont from "next/font/local";
 import { Analytics } from "@vercel/analytics/next";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 import { strings } from "@/i18n/copy";
 import { LocaleProvider, SkipLink } from "@/i18n/locale";
 import type { Lang } from "@/i18n/localize";
@@ -147,6 +148,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
               />
               {children}
               <Analytics />
+              <SpeedInsights />
             </AmLabsCreditProvider>
           </LocaleProvider>
         </MenuProvider>
