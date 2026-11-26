@@ -331,6 +331,52 @@
    .ops-payment-badge{font-size:var(--text-11)}
   .ops-detail-car{flex-wrap:wrap}.ops-order-detail-pane .kitchen-actions-band{margin-top:var(--space-12)}
 }
+/* Staff punch on iPad / tablet: drawer nav so catalog + cart own the width. */
+@media (max-width: 1100px) {
+  .admin-workspace:has(.staff-punch) .admin-sidebar {
+    width: 232px;
+    transform: translateX(-110%);
+    visibility: hidden;
+    transition: transform var(--duration-ui), visibility var(--duration-ui);
+    box-shadow: 10px 0 60px color-mix(in srgb, var(--color-shadow) 20%, transparent);
+  }
+  .admin-workspace:has(.staff-punch)[dir="rtl"] .admin-sidebar { transform: translateX(110%); }
+  .admin-workspace:has(.staff-punch).nav-open .admin-sidebar {
+    transform: none;
+    visibility: visible;
+  }
+  .admin-workspace:has(.staff-punch) .admin-main { margin-inline-start: 0; }
+  .admin-workspace:has(.staff-punch) .ops-topbar .ops-mobile-menu {
+    display: grid;
+    place-items: center;
+    width: 38px;
+    height: 40px;
+    padding: 0;
+    background: none;
+  }
+  .admin-workspace:has(.staff-punch) .ops-sidebar-brand .ops-mobile-close {
+    display: grid;
+    margin-inline-start: auto;
+    color: var(--color-white);
+    width: 28px;
+    padding: 0;
+  }
+  .admin-workspace:has(.staff-punch) .ops-nav-backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: color-mix(in srgb, var(--admin-c-17130f) 43.92%, transparent);
+    border: 0;
+    z-index: var(--z-sheet);
+    width: 100%;
+    height: 100%;
+    border-radius: 0;
+  }
+  .admin-workspace:has(.staff-punch) .admin-content {
+    padding: var(--space-16) var(--space-14) var(--space-28);
+  }
+  .admin-workspace:has(.staff-punch) .ops-breadcrumb { display: none; }
+}
 @media(max-width:600px){
   .ops-history-table{border:0;background:none;overflow:visible}
   .ops-history-table table,.ops-history-table tbody{display:block}
