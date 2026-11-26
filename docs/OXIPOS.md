@@ -8,8 +8,9 @@ Two different customer paths. Do not mix them.
 | --- | --- | --- | --- |
 | **Car-collection pickup** | Customer orders from home / car on **`order.sushinaa.qa`** (`order.*` or `STOREFRONT_MODE=pickup`) | Our checkout (**live Sadad** / pay-at-pickup / mock) | **Our CMS** live Orders — not OXiPOS |
 | **On-site / at the restaurant** | Guest is already in branch on **`menu.sushinaa.qa`** (non-pickup storefront) | Branch card machine / counter — **not** Sadad | **OXiPOS** pulls from `menu.*` |
+| **Staff POS (CMS punch)** | Waiter punches the ticket in Admin (`order_surface = staff`) | Cash / card / split recorded at collect — **not** Sadad | **CMS** live Orders — **not** OXiPOS |
 
-**OXiPOS must only call the menu host** (`menu.sushinaa.qa`) — never `order.*`. Pickup orders stay in the CMS. Do not feed CMS pickup tickets into OXiPOS, and do not let POS acceptance drive CMS kitchen status.
+**OXiPOS must only call the menu host** (`menu.sushinaa.qa`) — never `order.*`. Pickup and staff CMS tickets stay in the CMS. Do not feed those rows into OXiPOS, and do not let POS acceptance drive CMS kitchen status. The `restaurant` surface remains the OXiPOS path (dormant until cutover); do not reuse it for staff punch.
 
 That boundary is intentional product architecture, not a temporary quirk.
 

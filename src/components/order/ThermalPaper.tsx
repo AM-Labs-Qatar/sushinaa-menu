@@ -67,7 +67,7 @@ export function ThermalBrand({ branchName, logo = '/brand/logo.svg' }: { branchN
     <h1>Sushinaa Restaurant</h1><p className="thermal-branch">{branchName}</p>
   </header>;
 }
-export function ThermalWho({ number, numberAttr, customer, phone, car, brand, vehicle, fulfilment, note }: {
+export function ThermalWho({ number, numberAttr, customer, phone, car, brand, vehicle, fulfilment, note, channel = 'Website order' }: {
   number: string;
   numberAttr?: string;
   customer: string;
@@ -77,17 +77,20 @@ export function ThermalWho({ number, numberAttr, customer, phone, car, brand, ve
   vehicle: string;
   fulfilment: string;
   note?: string;
+  /** Empty for Staff POS — kitchen should not see "Website order". */
+  channel?: string;
 }) {
+  const who = Boolean(customer || phone);
   return <section className="thermal-who">
     <p className="ticket-number-label">Order number · <span lang="ar">رقم الطلب</span></p>
     <p className="ticket-number" data-order-number={numberAttr}>{number}</p>
     <div className="thermal-customer">
-      <p className="thermal-who-row"><span>{customer}</span><span dir="ltr">{phone}</span></p>
+      {who && <p className="thermal-who-row"><span>{customer}</span><span dir="ltr">{phone}</span></p>}
       {(car || brand) && <p className="thermal-who-row thermal-car"><strong>Car Number:{car ? ` ${car}` : ''}</strong>{brand && <span>{brand}</span>}</p>}
       {vehicle && <p className="thermal-car">{vehicle}</p>}
       {note && <p className="thermal-note" dir="auto">{note}</p>}
     </div>
-    <p className="thermal-source"><span>Website order</span><span>{fulfilment}</span></p>
+    <p className="thermal-source">{channel ? <span>{channel}</span> : null}<span>{fulfilment}</span></p>
   </section>;
 }
 export function ThermalColumns() {

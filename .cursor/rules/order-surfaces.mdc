@@ -1,15 +1,18 @@
 ---
-description: Pickup CMS vs in-restaurant OXiPOS — never mix kitchen feeds
+description: Pickup CMS vs staff CMS vs OXiPOS — never mix kitchen feeds
 alwaysApply: true
 ---
 
 # Order surfaces (separation of concerns)
 
-Two paths. Keep them separate.
+Three paths. Keep them separate.
 
-1. **Car-collection pickup** — `order.sushinaa.qa` (`order.*` / `STOREFRONT_MODE=pickup`). Payment = **Sadad** (or pay-at-pickup until cutover). Kitchen = **CMS live Orders**. Never export these tickets to OXiPOS.
-2. **On-site / at the restaurant** — `menu.sushinaa.qa` (non-pickup). Payment = branch card machine / counter (**not** Sadad). Kitchen relay = **OXiPOS** pull on the menu host only.
+1. **Car-collection pickup** — `order.sushinaa.qa` (`order.*` / `STOREFRONT_MODE=pickup`). Payment = **Sadad** (or pay-at-pickup until cutover). Kitchen = **CMS live Orders**. Never export these tickets to OXiPOS. `order_surface = pickup`.
+2. **Staff POS (CMS punch)** — staff creates tickets in Admin for an enabled branch. Payment recorded at collect as cash / card / split (outside gateway). Kitchen = **CMS live Orders**. Auto-preparing. `order_surface = staff`. Not OXiPOS.
+3. **On-site customer → OXiPOS** — `menu.sushinaa.qa` (non-pickup). Payment = branch card machine / counter (**not** Sadad). Kitchen relay = **OXiPOS** pull on the menu host only. `order_surface = restaurant`. Currently dormant until OXIPOS cutover.
 
-OXiPOS must only call `menu.*` (`/api/pos/orders`, `/api/pos/orders/{id}/accepted` — trailing slash also accepted). Do not point POS at `order.*`, do not feed pickup CMS orders into `/api/pos/orders`, and do not let POS acceptance drive CMS pickup kitchen status.
+OXiPOS must only call `menu.*` (`/api/pos/orders`, `/api/pos/orders/{id}/accepted` — trailing slash also accepted). Do not point POS at `order.*`, do not feed pickup or staff CMS orders into `/api/pos/orders`, and do not let POS acceptance drive CMS kitchen status.
+
+Per-branch enablement: menu branch `orderingModes` set (`pickup` | `staff`), not env flags.
 
 Canonical detail: `docs/OXIPOS.md`, `docs/CAR-COLLECTION.md`, `docs/environments.md`.

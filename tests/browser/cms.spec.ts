@@ -901,7 +901,7 @@ test("every admin write leaves an activity row and failed writes leave none", as
   await expect(page.getByText(`Changed item “${original.dishes[0].name}”: description`).first()).toBeVisible();
   await page.getByLabel("Show activity for").selectOption("settings");
   await expect(page.getByText("Changed settings: tagline").first()).toBeVisible();
-  await expect(page.locator(".admin-activity li").first()).toContainText("Changed settings: tagline");
+  await expect(page.locator(".admin-activity tr").first()).toContainText("Changed settings: tagline");
   await page.getByRole("button", { name: "Sign out", exact: true }).click();
   await expect(page).toHaveURL(/\/admin\/login/);
   await api.post("/api/admin/session", { headers, data: admin });

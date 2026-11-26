@@ -3,18 +3,25 @@ import { useState } from 'react';
 import { useLocale } from '@/i18n/locale';
 import type { MenuData } from '@/cms/schema';
 import { branchListSchema, type BranchSettings } from '@/branches/schema';
+import { BRANCH_ORDER_MODES, enabledOrderingModes, withOrderingMode, type BranchOrderMode } from '@/branches/ordering-modes';
 import { useUnsaved, saveShortcut, focusFirstInvalid } from './Fields';
 const days = [ ['Sunday','الأحد'],['Monday','الاثنين'],['Tuesday','الثلاثاء'],['Wednesday','الأربعاء'],['Thursday','الخميس'],['Friday','الجمعة'],['Saturday','السبت'] ];
 const clock = (n:number) => `${String(Math.floor(n%1440/60)).padStart(2,'0')}:${String(n%60).padStart(2,'0')}`;
 const minute = (value:string) => { const [h,m]=value.split(':').map(Number); return h*60+m; };
+const modeLabel = (mode: BranchOrderMode, ar: boolean) => mode === 'pickup'
+  ? (ar ? 'طلب الاستلام (العميل)' : 'Pickup ordering (customer)')
+  : (ar ? 'طلب الموظفين (نقطة البيع)' : 'Staff ordering (POS)');
 export function BranchEditor({menu,onSave}:{menu:MenuData;onSave:(menu:MenuData)=>Promise<void>}) {
   const {lang}=useLocale(); const ar=lang==='ar';const text=(en:string,arabic:string)=>ar?arabic:en;
-  const [draft,setDraft]=useState(()=>structuredClone(menu.branches));
+  const [draft,setDraft]=useState(()=>structuredClone(menu.branches).map(row=>({...row,orderingModes:enabledOrderingModes(row)})));
   const [selected,setSelected]=useState(0);const [busy,setBusy]=useState(false);const [errors,setErrors]=useState<Record<string,string>>({});
   const [copyDay,setCopyDay]=useState(0);
-  const dirty=JSON.stringify(draft)!==JSON.stringify(menu.branches);useUnsaved(dirty);
+  const dirty=JSON.stringify(draft)!==JSON.stringify(menu.branches.map(row=>({...row,orderingModes:enabledOrderingModes(row)})));useUnsaved(dirty);
   const branch=draft[selected];
   function change(values:Partial<BranchSettings>) {setDraft(rows=>rows.map((row,i)=>i===selected?{...row,...values}:row));setErrors({});}
+  function toggleMode(mode: BranchOrderMode, on: boolean) {
+    change({ orderingModes: withOrderingMode(enabledOrderingModes(branch), mode, on) });
+  }
   function hours(day:number,key:'open'|'close'|'closed',value:string|boolean) {
     const next=branch.hours.map((session,i)=>{if(i!==day)return session;if(key==='closed')return {...session,closed:Boolean(value)};
       const open=key==='open'?minute(String(value)):session.open;
@@ -35,6 +42,20 @@ export function BranchEditor({menu,onSave}:{menu:MenuData;onSave:(menu:MenuData)
         })}
       </div>
       <p className="branch-editor-note">{text('The existing branch link and map location stay the same.','يبقى رابط الفرع وموقعه على الخريطة كما هما.')}</p>
+    </section>
+    <section className="admin-card" aria-label={text('Ordering modes','أوضاع الطلب')}>
+      <h2>{text('Ordering modes','أوضاع الطلب')}</h2>
+      <p className="branch-editor-note">{text('Choose which order paths this branch accepts. Staff POS is separate from customer pickup.','اختر مسارات الطلب المفعّلة لهذا الفرع. طلب الموظفين منفصل عن طلب الاستلام للعملاء.')}</p>
+      <div className="branch-ordering-modes" role="group" aria-label={text('Ordering modes','أوضاع الطلب')}>
+        {BRANCH_ORDER_MODES.map((mode) => {
+          const on = enabledOrderingModes(branch).includes(mode);
+          const id = `branch-mode-${branch.slug}-${mode}`;
+          return <label key={mode} className="branch-closed" htmlFor={id}>
+            <input id={id} type="checkbox" checked={on} disabled={busy} onChange={(event) => toggleMode(mode, event.target.checked)} />
+            {modeLabel(mode, ar)}
+          </label>;
+        })}
+      </div>
     </section>
     <section className="admin-card branch-hours" aria-label={text('Opening hours','ساعات العمل')}>
       <header className="branch-hours-heading"><div><h2>{text('Opening hours','ساعات العمل')}</h2><p>{text('Qatar time · Closing after midnight is counted as the next day.','بتوقيت قطر · يُحتسب الإغلاق بعد منتصف الليل في اليوم التالي.')}</p></div></header>

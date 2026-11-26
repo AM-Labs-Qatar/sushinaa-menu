@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { currentStaff } from "@/cms/auth";
 import { db, initDb } from "@/cms/db";
 import { sadadTxnSql } from "@/ordering/ledger";
+import { historyEarliestDate } from "@/ordering/history-window";
 export const dynamic = "force-dynamic";
 // Read-only: the activity log has no write path through the API.
 const AREAS: Record<string, string[]> = {
@@ -24,16 +25,22 @@ export async function GET(request: Request) {
   const types = AREAS[params.get("area") ?? ""];
   const page = Math.min(1000, Math.max(1, Number(params.get("page")) || 1));
   await initDb();
-  const where = types ? `WHERE a.entity_type IN (${types.map(() => "?").join(",")})` : "";
+  const earliest = new Date(`${historyEarliestDate()}T00:00:00+03:00`).toISOString();
+  const filters = ["a.at >= ?"];
+  const args: (string | number)[] = [earliest];
+  if (types) {
+    filters.push(`a.entity_type IN (${types.map(() => "?").join(",")})`);
+    args.push(...types);
+  }
   const result = await db.execute({
     sql: `SELECT a.id, a.at, a.actor, a.action, a.entity_type, a.entity_id, a.label, a.diff, a.ip, a.user_agent,
         o.order_number,
         CASE WHEN a.entity_type = 'order' THEN ${sadadTxnSql("a.entity_id")} END AS payment_reference
       FROM audit a
       LEFT JOIN orders o ON a.entity_type = 'order' AND o.id = a.entity_id
-      ${where}
+      WHERE ${filters.join(" AND ")}
       ORDER BY a.id DESC LIMIT ? OFFSET ?`,
-    args: [...(types ?? []), PAGE_SIZE + 1, (page - 1) * PAGE_SIZE],
+    args: [...args, PAGE_SIZE + 1, (page - 1) * PAGE_SIZE],
   });
   const rows = result.rows.slice(0, PAGE_SIZE).map((r) => ({
     id: Number(r.id),

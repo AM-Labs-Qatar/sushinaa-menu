@@ -4,6 +4,7 @@ import { useLocale } from "@/i18n/locale";
 import { formatQatarDateTime } from "@/lib/datetime";
 import { formatOrderNumber } from "@/ordering/order-number";
 import { staffOrderRef } from "@/ordering/staff-order-ref";
+import { HISTORY_DISPLAY_DAYS } from "@/ordering/history-window";
 import { useNotify } from "./Notices";
 
 type Row = {
@@ -21,7 +22,7 @@ type Row = {
   paymentReference?: string | null;
 };
 const AREAS = [
-  ["", "All activity"],
+  ["", "All"],
   ["sessions", "Sign-ins"],
   ["items", "Items"],
   ["categories", "Categories"],
@@ -78,16 +79,14 @@ export function describe(row: Row, lang: "en" | "ar" = "en") {
   switch (row.action) {
     case "order.status": return `${lang === "ar" ? "تم تغيير حالة الطلب" : "Order status changed"}: ${orderRef}`;
     case "order.contact_viewed": return `${lang === "ar" ? "تم عرض بيانات التواصل للطلب" : "Order contact viewed"}: ${orderRef}`;
-    case "session.sign_in":
-      return "Signed in";
-    case "session.sign_out":
-      return "Signed out";
-    case "session.sign_in_failed":
-      return "Failed sign-in";
-    case "media.upload":
-      return `Uploaded a photo${row.label ? ` (${row.label})` : ""}`;
-    case "settings.update":
-      return `${SECTIONS[row.entityType] ?? "Changed settings"}: ${changed}`;
+    case "order.created": return `Order created: ${orderRef}`;
+    case "order.edited": return `Order edited: ${orderRef}`;
+    case "order.adjustment_settled": return `Cash returned: ${orderRef}`;
+    case "session.sign_in": return "Signed in";
+    case "session.sign_out": return "Signed out";
+    case "session.sign_in_failed": return "Failed sign-in";
+    case "media.upload": return `Uploaded a photo${row.label ? ` (${row.label})` : ""}`;
+    case "settings.update": return `${SECTIONS[row.entityType] ?? "Changed settings"}: ${changed}`;
   }
   const what = noun[row.entityType] ?? row.entityType;
   return (
@@ -105,23 +104,23 @@ export function describe(row: Row, lang: "en" | "ar" = "en") {
 const show = (v: unknown) => {
   const s = typeof v === "string" ? v : JSON.stringify(v);
   if (s === undefined || s === "null" || s === "") return "—";
-  return s.length > 160 ? `${s.slice(0, 160)}…` : s;
+  return s.length > 80 ? `${s.slice(0, 80)}…` : s;
 };
 
-// Field-by-field changes; creates and deletes keep a snapshot instead.
 function changes(row: Row) {
   if (!row.diff || row.action === "media.upload" || "after" in row.diff || "before" in row.diff)
     return [];
   return Object.entries(row.diff as Record<string, { from: unknown; to: unknown }>);
 }
 
-function Detail({ term, children }: { term: string; children: React.ReactNode }) {
-  return (
-    <div>
-      <dt>{term}</dt>
-      <dd dir="auto">{children}</dd>
-    </div>
-  );
+function detailLine(row: Row) {
+  const bits: string[] = [];
+  if (row.action !== "session.sign_in_failed" && row.actor) bits.push(row.actor);
+  if (row.orderNumber != null) bits.push(`#${formatOrderNumber(row.orderNumber)}`);
+  if (row.paymentReference) bits.push(row.paymentReference);
+  for (const [key, change] of changes(row)) bits.push(`${field(key)}: ${show(change.from)}→${show(change.to)}`);
+  if (row.ip) bits.push(row.ip);
+  return bits.join(" · ");
 }
 
 export function Activity() {
@@ -151,8 +150,8 @@ export function Activity() {
     };
   }, [area, page, notify]);
   return (
-    <>
-      <div className="admin-toolbar">
+    <section className="admin-activity-dense" dir="ltr">
+      <div className="admin-activity-dense-bar">
         <select
           aria-label="Show activity for"
           value={area}
@@ -163,49 +162,41 @@ export function Activity() {
         >
           {AREAS.map(([value, text]) => (
             <option key={value} value={value}>
-              {value === "orders" && lang === "ar" ? "الطلبات" : text}
+              {value === "orders" && lang === "ar" ? "Orders" : text}
             </option>
           ))}
         </select>
+        <span className="admin-activity-dense-note">Last {HISTORY_DISPLAY_DAYS} days</span>
       </div>
       {data && !data.rows.length && (
-        <p className="admin-empty">Nothing recorded yet.</p>
+        <p className="admin-empty">Nothing in the last {HISTORY_DISPLAY_DAYS} days.</p>
       )}
-      <ol className="admin-activity" aria-busy={!data}>
-        {data?.rows.map((row) => (
-          <li key={row.id}>
-            <div className="activity-line">
-              <strong>{describe(row, lang)}</strong>
-              <time dateTime={row.at} title={`${row.at} UTC`}>
-                {formatQatarDateTime(row.at)}
-              </time>
-            </div>
-            <details>
-              <summary>Details</summary>
-              <dl>
-                {row.action !== "session.sign_in_failed" && row.actor && (
-                  <Detail term="By">{row.actor}</Detail>
-                )}
-                {row.orderNumber != null && (
-                  <Detail term={lang === "ar" ? "رقم الطلب" : "Order"}>
-                    #{formatOrderNumber(row.orderNumber)}
-                  </Detail>
-                )}
-                {row.paymentReference && (
-                  <Detail term={lang === "ar" ? "سداد" : "Sadad"}>{row.paymentReference}</Detail>
-                )}
-                {changes(row).map(([key, change]) => (
-                  <Detail key={key} term={field(key)}>
-                    {show(change.from)} → {show(change.to)}
-                  </Detail>
-                ))}
-                <Detail term="IP address">{row.ip ?? "Not recorded"}</Detail>
-                <Detail term="Device">{row.userAgent ?? "Not recorded"}</Detail>
-              </dl>
-            </details>
-          </li>
-        ))}
-      </ol>
+      {data && data.rows.length > 0 && (
+        <div className="admin-activity-table-wrap">
+          <table className="admin-activity-table">
+            <thead>
+              <tr>
+                <th>When</th>
+                <th>What</th>
+                <th>Detail</th>
+              </tr>
+            </thead>
+            <tbody className="admin-activity">
+              {data.rows.map((row) => (
+                <tr key={row.id}>
+                  <td>
+                    <time dateTime={row.at} title={`${row.at} UTC`}>
+                      {formatQatarDateTime(row.at)}
+                    </time>
+                  </td>
+                  <td>{describe(row, lang)}</td>
+                  <td className="admin-activity-detail">{detailLine(row) || "—"}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
       {data && (page > 1 || data.more) && (
         <nav className="admin-pager" aria-label="Activity pages">
           <button disabled={page === 1} onClick={() => setPage(page - 1)}>
@@ -217,6 +208,6 @@ export function Activity() {
           </button>
         </nav>
       )}
-    </>
+    </section>
   );
 }

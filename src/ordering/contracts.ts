@@ -10,6 +10,9 @@ export const orderQuery = z.object({
   from: date.optional(), to: date.optional(),
   q: z.string().trim().min(1).max(80).optional(),
   view: z.enum(['active','history']).optional(), unprinted: z.literal('1').optional(),
+  surface: z.enum(['pickup', 'staff']).optional(),
+  /** Soft filter: only tickets punched by the signed-in staff user (server binds username). */
+  mine: z.literal('1').optional(),
   page: z.coerce.number().int().min(1).max(1000).default(1),
   limit: z.coerce.number().int().min(1).max(100).default(25), since: orderId.optional(),
   arrivedSince: z.iso.datetime().optional(),
@@ -18,13 +21,20 @@ export type OrderQuery = z.infer<typeof orderQuery>;
 
 // Fixed reason codes keep arbitrary names/phones out of immutable audit labels.
 export const cancellationReasons = ['customer_request', 'unavailable', 'duplicate', 'branch_closed'] as const;
+export const tenderLineSchema = z.object({
+  kind: z.enum(['cash', 'card']),
+  amountMinor: z.number().int().positive(),
+}).strict();
 export const statusBody = z.object({ to: z.enum(statuses), expected: z.enum(statuses),
-  recordPayment: z.boolean().optional(), reason: z.enum(cancellationReasons).optional(),
+  recordPayment: z.boolean().optional(),
+  tenders: z.array(tenderLineSchema).min(1).max(2).optional(),
+  reason: z.enum(cancellationReasons).optional(),
 }).strict().refine(v => v.to !== 'cancelled' || Boolean(v.reason));
 export type StatusInput = z.infer<typeof statusBody>;
 export type OrderSummary = { id: string; orderNumber: number | null; branchId: BranchId; status: OrderStatus; paymentMethod: PaymentMethod;
   paidAt: string | null; totalMinor: number; currency: 'QAR'; createdAt: string; name: string; phone: string; plate: string;
   printCount: number; printedAt: string | null; arrivedAt: string | null; updatedAt?: string; statusAt?:string; brandId?: string;
+  orderSurface?: 'pickup' | 'restaurant' | 'staff'; createdBy?: string | null;
   items?: {dishId:string;name:string;nameAr:string;quantity:number;selection?:OrderSnapshot['lines'][number]['selection']}[]; itemCount?:number; hasNotes?:boolean };
 export type OrderDetailData = OrderSummary & { customer: { name: string; phone: string; plate: string; colour: string; brand: string; car: string; instructions: string };
   snapshot: Omit<OrderSnapshot, 'customer'> & { version: number; menuRevision: number };
@@ -33,7 +43,11 @@ export type OrderDetailData = OrderSummary & { customer: { name: string; phone: 
   currentLines: { id: string; name: string; nameAr: string; quantity: number; unitMinor: number; note: string; voided: boolean; compliment: boolean; selection: OrderSnapshot['lines'][number]['selection']; categoryName: string; dishId: string; discount: { mode: 'percent'; bp: number } | { mode: 'amount'; amountMinor: number } | null }[];
   discounts: { scope: 'line' | 'order'; lineId: string | null; amountMinor: number }[];
   edits: { kind: string; lineId: string | null; reasonCode: string; note: string | null }[];
-  owedBackMinor: number; };
+  owedBackMinor: number;
+  tenders: { kind: 'cash' | 'card'; amountMinor: number }[];
+  adjustments: { id: string; amountMinor: number; settledAt: string | null; createdAt: string }[];
+  tendersRequired: boolean;
+};
 
 /** Session-authorized customer receipt; excludes staff notes and internal audit data. */
 export type CustomerReceiptDetails = {

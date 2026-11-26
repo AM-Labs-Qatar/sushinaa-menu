@@ -31,11 +31,14 @@ export function assertBranchOpen(menu: MenuData, branchId: string, now = new Dat
   return branch;
 }
 
-function quoteMenu(input: CheckoutInput, menu: MenuData, now = new Date()) {
-  const branch = assertBranchOpen(menu, input.branchId, now);
-  if (input.lines.reduce((n, line) => n + line.quantity, 0) > 100) throw new CheckoutError('LIMIT');
+/** Shared line quote from the pickup catalog. Hours / mode gates stay with the caller. */
+export function quoteCatalogLines(
+  linesInput: CheckoutInput['lines'],
+  menu: MenuData,
+) {
+  if (linesInput.reduce((n, line) => n + line.quantity, 0) > 100) throw new CheckoutError('LIMIT');
   const available = publicMenu(menu, 'pickup').dishes;
-  const lines = input.lines.map(line => {
+  return linesInput.map(line => {
     const dish = available.find(d => d.id === line.dishId);
     if (!dish) throw new CheckoutError('UNAVAILABLE');
     if (!validCheckoutSelection(dish, line.selection)) throw new CheckoutError('OPTIONS');
@@ -47,6 +50,11 @@ function quoteMenu(input: CheckoutInput, menu: MenuData, now = new Date()) {
       selection: line.selection, quantity: line.quantity, note: line.note, unitMinor, totalMinor: unitMinor * line.quantity,
       ...(dish.posSku ? { posSku: dish.posSku } : {}) };
   });
+}
+
+function quoteMenu(input: CheckoutInput, menu: MenuData, now = new Date()) {
+  const branch = assertBranchOpen(menu, input.branchId, now);
+  const lines = quoteCatalogLines(input.lines, menu);
   return { branchId: branch.slug, branchName: branch.name, customer: input.customer, collection: 'car' as const, lines,
     totalMinor: lines.reduce((n, line) => n + line.totalMinor, 0), currency: 'QAR' as const };
 }

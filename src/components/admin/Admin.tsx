@@ -23,10 +23,12 @@ import { Dashboard } from "./Dashboard";
 import { Orders } from "./Orders";
 import { Payments } from "./Payments";
 import { StaffPanel } from "./StaffPanel";
+import { StaffPunch } from "./StaffPunch";
 import { CouponsPanel } from "./CouponsPanel";
 import { Activity } from "./Activity";
 import type { CouponOrderOpen } from "@/ordering/coupons/linked-order";
 import type { Role } from "@/cms/permissions";
+import { hasOrderingMode, menuHasOrderingMode } from "@/branches/ordering-modes";
 import { confirmDiscard } from "./Fields";
 import { useNotify } from "./Notices";
 export function Admin({ initial, role, branchId }: { initial: MenuSnapshot; role: Role; branchId?: string }) {
@@ -51,21 +53,24 @@ export function Admin({ initial, role, branchId }: { initial: MenuSnapshot; role
   },[mobileNav]);
   const [orderIntent,setOrderIntent]=useState<OrderIntent&{key:number}>({key:0});
   const [paymentIntent,setPaymentIntent]=useState<{orderId?:string;key:number}>({key:0});
-  const labels:Record<string,[string,string,OpsIconName]>={Dashboard:['Dashboard','لوحة التحكم','dashboard'],Orders:['Orders','الطلبات المباشرة','orders'],History:['Order history','سجل الطلبات','history'],Payments:['Payments','المدفوعات','money'],Menu:['Menu','القائمة','menu'],Categories:['Categories','التصنيفات','categories'],Branches:['Branches','الفروع','branches'],Users:['Users','المستخدمون','users'],Coupons:['Coupons','القسائم','money'],Settings:['Settings','الإعدادات','settings'],Activity:['Activity','النشاط','activity']};
+  const labels:Record<string,[string,string,OpsIconName]>={Dashboard:['Dashboard','لوحة التحكم','dashboard'],Orders:['Orders','الطلبات المباشرة','orders'],NewOrder:['New order','طلب جديد','orders'],History:['Order history','سجل الطلبات','history'],Payments:['Payments','المدفوعات','money'],Menu:['Menu','القائمة','menu'],Categories:['Categories','التصنيفات','categories'],Branches:['Branches','الفروع','branches'],Users:['Users','المستخدمون','users'],Coupons:['Coupons','القسائم','money'],Settings:['Settings','الإعدادات','settings'],Activity:['Activity','النشاط','activity']};
   const [unreadOrders, setUnreadOrders] = useState(0);
   const [snapshot, setSnapshot] = useState(initial);
   const params = useSearchParams();
+  const staffPunchAvailable = role === 'admin'
+    ? snapshot.menu.branches.some((row) => hasOrderingMode(row, 'staff'))
+    : Boolean(branchId && menuHasOrderingMode(snapshot.menu.branches, branchId, 'staff'));
   // A filtered menu link (?category=&show=&q=) opens straight on the Menu.
   const navGroups = role === "admin"
     ? [
         { id: "dashboard", label: ["Dashboard", "لوحة التحكم"] as const, items: ["Dashboard"] },
-        { id: "orders", label: ["Orders", "الطلبات"] as const, items: ["Orders", "History", "Payments"] },
+        { id: "orders", label: ["Orders", "الطلبات"] as const, items: staffPunchAvailable ? ["NewOrder", "Orders", "History", "Payments"] : ["Orders", "History", "Payments"] },
         { id: "menu", label: ["Menu", "القائمة"] as const, items: ["Menu", "Categories"] },
         { id: "admin", label: ["Admin", "الإدارة"] as const, items: ["Branches", "Users", "Coupons", "Settings", "Activity"] },
       ]
     : [
         { id: "dashboard", label: ["Dashboard", "لوحة التحكم"] as const, items: ["Dashboard"] },
-        { id: "orders", label: ["Orders", "الطلبات"] as const, items: ["Orders", "History"] },
+        { id: "orders", label: ["Orders", "الطلبات"] as const, items: staffPunchAvailable ? ["NewOrder", "Orders", "History"] : ["Orders", "History"] },
       ];
   const [section, setSection] = useState(() =>
     role !== "admin" ? "Orders" : ["category", "show", "q"].some((k) => params.has(k)) ? "Menu" : "Dashboard",
@@ -184,7 +189,7 @@ export function Admin({ initial, role, branchId }: { initial: MenuSnapshot; role
         </div></header>
         <main className="admin-content">
           <div className="admin-heading">
-            <div><h1>{section==='Menu'?text('Your menu','قائمتك'):section==='Orders'?text('Live orders','الطلبات المباشرة'):labels[section][ar?1:0]}</h1></div>
+            <div><h1>{section==='Menu'?text('Your menu','قائمتك'):section==='Orders'?text('Live orders','الطلبات المباشرة'):section==='NewOrder'?text('New order','طلب جديد'):labels[section][ar?1:0]}</h1></div>
             {section === "Menu" && (
               <div className="admin-heading-actions">
                 <button
@@ -257,6 +262,12 @@ export function Admin({ initial, role, branchId }: { initial: MenuSnapshot; role
               busy={busy}
               onEdit={setCategory}
               onChange={run}
+            />
+          )}
+          {section === "NewOrder" && staffPunchAvailable && (
+            <StaffPunch
+              menu={menu}
+              branchId={role === "branch_staff" ? branchId : branch || undefined}
             />
           )}
           <Orders active={section === "Orders" || section === "History"} view={section==='History'?'history':'active'} branch={branch} intent={orderIntent} onUnread={setUnreadOrders} role={role} menu={menu} />

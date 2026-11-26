@@ -12,10 +12,14 @@ import type { BranchId } from '@/branches/branches';
 import { branchClause, type BranchScope } from './scope';
 import { operationScope } from './operations-calendar';
 import { counterSettlementStatements, mockProvider, settlePayment } from './payments';
+import { tendersRequiredForCollect, validateTenders } from './counter-tender';
+import { counterTenderSettlementStatements } from './counter-tender-settle';
 import { releaseCouponStatement } from './coupons/repository';
 import { AUTO_PRINT_WINDOW_MS } from './config';
 import { afterChange } from './write';
 import { CMS_KITCHEN } from './visibility';
+import { isOrderSurface, ORDER_SURFACE_PICKUP } from './surface';
+import { clampHistoryFrom, historyLatestDate } from './history-window';
 import { isProductionDeployment } from '@/lib/deploy-env';
 
 export { CMS_KITCHEN } from './visibility';
@@ -36,7 +40,26 @@ export async function orderEditMeta(orderId: string) {
     sql: 'SELECT COALESCE(SUM(amount_minor), 0) AS n FROM order_adjustments WHERE order_id=? AND settled_at IS NULL',
     args: [orderId],
   })).rows[0];
-  return { edits, owedBackMinor: Number(owed?.n ?? 0) };
+  const adjustments = (await db.execute({
+    sql: 'SELECT id, amount_minor, settled_at, created_at FROM order_adjustments WHERE order_id=? ORDER BY created_at, id',
+    args: [orderId],
+  })).rows.map((row) => ({
+    id: String(row.id),
+    amountMinor: Number(row.amount_minor),
+    settledAt: nullable(row.settled_at),
+    createdAt: String(row.created_at),
+  }));
+  return { edits, owedBackMinor: Number(owed?.n ?? 0), adjustments };
+}
+
+async function orderTenders(orderId: string) {
+  return (await db.execute({
+    sql: 'SELECT kind, amount_minor FROM order_tenders WHERE order_id=? ORDER BY created_at, id',
+    args: [orderId],
+  })).rows.map((row) => ({
+    kind: String(row.kind) as 'cash' | 'card',
+    amountMinor: Number(row.amount_minor),
+  }));
 }
 const printableSql = statusInSql(printableStatuses);
 /** Last kitchen status change; falls back to paid/created for rows without audit. */
@@ -47,13 +70,18 @@ export function summary(row: DbRow): OrderSummary {
   const name = typeof row.customer_name === 'string' && row.customer_name ? String(row.customer_name) : '—';
   const phone = typeof row.customer_phone === 'string' && row.customer_phone ? String(row.customer_phone) : '—';
   const plate = typeof row.car_plate === 'string' && row.car_plate ? String(row.car_plate) : '—';
+  const surfaceRaw = row.order_surface;
+  const orderSurface = isOrderSurface(surfaceRaw) ? surfaceRaw : ORDER_SURFACE_PICKUP;
   return { id: String(row.id), orderNumber: row.order_number == null ? null : Number(row.order_number),
     branchId: row.branch_id as BranchId, status: row.status as OrderStatus,
     paymentMethod: row.payment_method as OrderSummary['paymentMethod'], paidAt: nullable(row.paid_at),
     totalMinor: Number(row.total_minor), currency: 'QAR', createdAt: String(row.created_at),
     name, phone, plate,
     printCount: Number(row.print_count ?? 0), printedAt: nullable(row.printed_at),
-    arrivedAt: nullable(row.customer_arrived_at) };
+    arrivedAt: nullable(row.customer_arrived_at),
+    orderSurface,
+    createdBy: nullable(row.created_by),
+  };
 }
 
 async function unprintedCount(scope: BranchScope) {
@@ -65,7 +93,7 @@ async function unprintedCount(scope: BranchScope) {
   return Number(row.n);
 }
 
-export async function listOrders(scope: BranchScope, query: OrderQuery) {
+export async function listOrders(scope: BranchScope, query: OrderQuery, actorUsername?: string) {
   await initOrders();
   // Branch staff keep their server scope; only owners may narrow via query.branch.
   const selectedScope = operationScope(scope, scope.kind === 'all' ? query.branch : undefined);
@@ -73,6 +101,13 @@ export async function listOrders(scope: BranchScope, query: OrderQuery) {
   const where = [CMS_KITCHEN, branch.sql];
   if (query.view) where.push(query.view === 'active' ? statusInSql(activeStatuses) : statusInSql(terminalStatuses));
   const args: (string | number)[] = [...branch.args];
+  if (query.surface === 'pickup') where.push(`(COALESCE(order_surface, 'pickup') = 'pickup')`);
+  if (query.surface === 'staff') where.push(`(order_surface = 'staff')`);
+  // mine=1 is a view preference only; username always comes from the session, never the client.
+  if (query.mine === '1' && actorUsername) {
+    where.push('created_by=?');
+    args.push(actorUsername);
+  }
   if (query.unprinted) where.push('print_count=0');
   if (query.status) {
     const states: readonly string[] = query.status in staffGroups ? staffGroups[query.status as StaffStatus] : [query.status];
@@ -80,8 +115,11 @@ export async function listOrders(scope: BranchScope, query: OrderQuery) {
     args.push(...states);
   }
   const dateColumn = query.view === 'history' ? STATUS_AT_SQL : 'created_at';
-  if (query.from) { where.push(`${dateColumn}>=?`); args.push(new Date(`${query.from}T00:00:00+03:00`).toISOString()); }
-  if (query.to) { where.push(`${dateColumn}<?`); args.push(new Date(Date.parse(`${query.to}T00:00:00+03:00`) + 86400000).toISOString()); }
+  // History is a floor-ops window only; older closed rows stay in DB for audit.
+  const historyFrom = query.view === 'history' ? clampHistoryFrom(query.from) : query.from;
+  const historyTo = query.view === 'history' ? (query.to && query.to <= historyLatestDate() ? query.to : historyLatestDate()) : query.to;
+  if (historyFrom) { where.push(`${dateColumn}>=?`); args.push(new Date(`${historyFrom}T00:00:00+03:00`).toISOString()); }
+  if (historyTo) { where.push(`${dateColumn}<?`); args.push(new Date(Date.parse(`${historyTo}T00:00:00+03:00`) + 86400000).toISOString()); }
   if (query.q) {
     if (query.q.startsWith('SU-') && /^SU-[0-9a-f-]{36}$/.test(query.q)) { where.push('id=?'); args.push(query.q); }
     else {
@@ -110,7 +148,7 @@ export async function listOrders(scope: BranchScope, query: OrderQuery) {
   // Live + history both newest-first. Live uses kitchen arrival (paid/created); history uses last status change.
   const orderBy = query.view === 'history' ? STATUS_AT_SQL : LIVE_SORT_SQL;
   const rows = await db.execute({
-    sql: `SELECT id,branch_id,status,payment_method,paid_at,total_minor,created_at,updated_at,snapshot,instructions,customer_name,customer_phone,car_plate,order_number,print_count,printed_at,customer_arrived_at, ${STATUS_AT_SQL} status_at FROM orders WHERE ${branch.sql} AND ${predicate} ORDER BY ${orderBy} DESC, order_number DESC, id DESC LIMIT ? OFFSET ?`,
+    sql: `SELECT id,branch_id,status,payment_method,paid_at,total_minor,created_at,updated_at,snapshot,instructions,customer_name,customer_phone,car_plate,order_number,print_count,printed_at,customer_arrived_at,order_surface,created_by, ${STATUS_AT_SQL} status_at FROM orders WHERE ${branch.sql} AND ${predicate} ORDER BY ${orderBy} DESC, order_number DESC, id DESC LIMIT ? OFFSET ?`,
     args: [...branch.args, ...args, query.limit + 1, (page - 1) * query.limit],
   });
   const count = followCursor ? Number((await db.execute({ sql: `SELECT COUNT(*) AS n FROM orders WHERE ${branch.sql} AND ${predicate}`, args: [...branch.args, ...args] })).rows[0].n) : 0;
@@ -122,7 +160,7 @@ export async function listOrders(scope: BranchScope, query: OrderQuery) {
     : 0;
   const cutoff = new Date(Date.now() - AUTO_PRINT_WINDOW_MS).toISOString();
   const autoPrint = (await db.execute({
-    sql: `SELECT id,branch_id,status,payment_method,paid_at,total_minor,created_at,customer_name,customer_phone,car_plate,order_number,print_count,printed_at,customer_arrived_at
+    sql: `SELECT id,branch_id,status,payment_method,paid_at,total_minor,created_at,customer_name,customer_phone,car_plate,order_number,print_count,printed_at,customer_arrived_at,order_surface,created_by
       FROM orders WHERE ${CMS_KITCHEN} AND ${branch.sql} AND print_count=0 AND print_claimed_at IS NULL AND ${printableSql}
       AND ${LIVE_SORT_SQL}>=? ORDER BY ${LIVE_SORT_SQL}, id`,
     args: [...branch.args, cutoff],
@@ -157,7 +195,11 @@ export async function detailOrder(scope: BranchScope, id: string): Promise<Order
   const { storedEdits } = await import('./order-edits');
   const projected = applyEdits(linesFromSnapshot(snapshot.lines ?? []), await storedEdits(id));
   const meta = await orderEditMeta(id);
+  const tenders = await orderTenders(id);
+  const paymentMethod = String(row.payment_method);
+  const paidAt = nullable(row.paid_at);
   return { ...summary(row), brandId, contactRevealed: true, snapshot, amendedAt: nullable(row.amended_at), originalTotalMinor: Number(snapshot.totalMinor ?? row.total_minor), currentLines: projected.lines, discounts: projected.discounts, edits: meta.edits, owedBackMinor: meta.owedBackMinor,
+    adjustments: meta.adjustments, tenders, tendersRequired: tendersRequiredForCollect(paymentMethod, paidAt),
     customer: { name: text(row.customer_name), phone: text(row.customer_phone),
       plate: text(row.car_plate), colour: text(row.car_colour), brand, car: text(row.car_model), instructions: text(row.instructions) },
     history: history.map(h => ({ at: String(h.at), ...JSON.parse(String(h.diff)).status, reason: nullable(h.label) })),
@@ -171,21 +213,30 @@ export async function transitionOrder(scope: BranchScope, id: string, input: Sta
   if (!isTransitionEdge(input.expected, input.to)) throw new OrderError('INVALID_TRANSITION', 409);
   if (input.to === 'refunded' && isProductionDeployment()) throw new OrderError('INVALID_TRANSITION', 409);
   const at = now.toISOString();
-  const settled = input.to === 'completed' && input.recordPayment === true
-    ? (await db.execute({ sql: `SELECT total_minor FROM orders WHERE id=? AND ${branch.sql}`, args: [id, ...branch.args] })).rows[0]
-    : undefined;
-  const purge = new Date(now.getTime() + 90 * 86400000).toISOString();
+  const current = (await db.execute({
+    sql: `SELECT total_minor, payment_method, paid_at FROM orders WHERE id=? AND ${branch.sql} AND ${CMS_KITCHEN}`,
+    args: [id, ...branch.args],
+  })).rows[0];
+  if (!current) throw new OrderError('NOT_FOUND', 404);
   const completed = input.to === 'completed';
-  const recordPayment = completed && input.recordPayment === true;
+  const needsTender = completed && tendersRequiredForCollect(String(current.payment_method), nullable(current.paid_at));
+  const tenderLines = needsTender ? validateTenders(input.tenders ?? [], Number(current.total_minor)) : null;
+  const recordPickupPayment = completed && input.recordPayment === true && String(current.payment_method) === 'pay_at_pickup';
+  if (completed && !nullable(current.paid_at) && !needsTender && !recordPickupPayment) {
+    throw new OrderError('INVALID_TRANSITION', 409);
+  }
+  const purge = new Date(now.getTime() + 90 * 86400000).toISOString();
+  const allowUnpaidComplete = Number(Boolean(recordPickupPayment || tenderLines));
   const result = await db.batch([
     { sql: `UPDATE orders SET status=?, updated_at=?,
         purge_after=CASE WHEN ? IN ('completed','cancelled') THEN ? ELSE purge_after END
         WHERE id=? AND ${branch.sql} AND status=? AND ${CMS_KITCHEN}
         AND (?!='refunded' OR paid_at IS NOT NULL)
-        AND (?!='completed' OR paid_at IS NOT NULL OR (payment_method='pay_at_pickup' AND ?=1))`,
-      args: [input.to, at, input.to, purge, id, ...branch.args, input.expected, input.to, input.to, Number(recordPayment)] },
-    afterChange(auditInsert(ctx, { action: 'order.status', entityType: 'order', entityId: id, label: input.to === 'cancelled' ? input.reason : undefined, diff: { status: { from: input.expected, to: input.to }, ...(settled ? { settledMinor: Number(settled.total_minor) } : {}) } })),
-    ...(recordPayment ? counterSettlementStatements(id, at) : []),
+        AND (?!='completed' OR paid_at IS NOT NULL OR ?=1)`,
+      args: [input.to, at, input.to, purge, id, ...branch.args, input.expected, input.to, input.to, allowUnpaidComplete] },
+    afterChange(auditInsert(ctx, { action: 'order.status', entityType: 'order', entityId: id, label: input.to === 'cancelled' ? input.reason : undefined, diff: { status: { from: input.expected, to: input.to }, ...(completed ? { settledMinor: Number(current.total_minor) } : {}), ...(tenderLines ? { tenders: tenderLines } : {}) } })),
+    ...(recordPickupPayment ? counterSettlementStatements(id, at) : []),
+    ...(tenderLines ? counterTenderSettlementStatements(id, at, tenderLines) : []),
     ...(input.to === 'cancelled' ? [releaseCouponStatement(id, at)] : []),
   ], 'write');
   if (result[0].rowsAffected !== 1) {
