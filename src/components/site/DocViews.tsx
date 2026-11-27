@@ -1,10 +1,11 @@
 "use client";
 
 import { useMenu } from "@/cms/context";
-import Link from "next/link";
 import { ContactForm } from "./ContactForm";
+import { CollectionNotice } from "./CollectionNotice";
 import { LegalShell } from "./LegalShell";
 import { useLocale } from "@/i18n/locale";
+import { Button } from "@/components/ui/Button";
 
 function arabicList(areas: string[]) {
   if (areas.length <= 1) return areas.join("");
@@ -23,6 +24,7 @@ export function PrivacyView() {
           سوشينا مطبخ سوشي في قطر. هذه القائمة تتيح لك تصفح الأطباق وحفظ اختياراتك لتعرضها على
           الموظفين. لا تُرسل الاختيارات إلينا، ولا يتم الدفع على هذا الموقع.
         </p>
+        <section id="collection"><h2>بيانات الاستلام</h2><CollectionNotice title={t.privacyTitle} /></section>
         <h2>من نحن</h2>
         <p>
           التواصل: واتساب <a href={wa}>{SITE.whatsappDisplay}</a>. إنستغرام{" "}
@@ -55,6 +57,7 @@ export function PrivacyView() {
         selections to show staff. Selections are not sent to us, and we do not take payment on this
         website.
       </p>
+      <section id="collection"><h2>Car collection orders</h2><CollectionNotice title={t.privacyTitle} /></section>
       <h2>Who we are</h2>
       <p>
         Contact: WhatsApp <a href={wa}>{SITE.whatsappDisplay}</a>. Instagram{" "}
@@ -183,14 +186,14 @@ export function ThankYouView() {
       <p>{t.thankBody}</p>
       <p>
         {t.whatsapp}{" "}
-        <a className="doc-cta" href={`https://wa.me/${SITE.whatsappE164}`}>
+        <Button variant="secondary" size="doc" href={`https://wa.me/${SITE.whatsappE164}`}>
           {SITE.whatsappDisplay}
-        </a>
+        </Button>
       </p>
       <p>
-        <Link className="doc-cta" href="/">
+        <Button size="doc" href="/">
           {t.backToMenu}
-        </Link>
+        </Button>
       </p>
     </LegalShell>
   );
@@ -202,9 +205,9 @@ export function MissingView() {
     <LegalShell title={t.missingTitle}>
       <p>{t.missingBody}</p>
       <p>
-        <Link className="doc-cta" href="/">
+        <Button size="doc" href="/">
           {t.backToMenu}
-        </Link>
+        </Button>
       </p>
     </LegalShell>
   );

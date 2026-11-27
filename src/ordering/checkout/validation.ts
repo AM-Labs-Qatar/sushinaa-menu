@@ -1,0 +1,77 @@
+import { z } from 'zod';
+import { CAR_BRANDS } from '@/ordering/car-brands';
+import type { Dish, Selection } from '@/catalog/types';
+import { isSelectionComplete } from '@/ordering/price';
+import { branchId } from '@/ordering/contracts';
+
+export const digits = (value: string) => value.replace(/[٠-٩۰-۹]/g, c => String(c.charCodeAt(0) >= 1776 ? c.charCodeAt(0) - 1776 : c.charCodeAt(0) - 1632));
+export function nationalPhone(phone: string) {
+  const digitsOnly = digits(phone).replace(/\D/g, '');
+  return digitsOnly.startsWith('974') ? digitsOnly.slice(3) : digitsOnly;
+}
+export function displayPhone(phone: string) {
+  const digitsOnly = digits(phone).replace(/\D/g, '');
+  if (digitsOnly.startsWith('974') && digitsOnly.length > 3) return `+974 ${digitsOnly.slice(3)}`;
+  return digitsOnly ? `+${digitsOnly}` : phone;
+}
+export const normalizePhone = (value: string) => {
+  let n = digits(value).replace(/[\s()+-]/g, '');
+  if (n.startsWith('00974')) n = n.slice(2);
+  if (n.length === 8) n = `974${n}`;
+  return n;
+};
+const optionalText = (max: number) => z.string().trim().max(max).default('');
+const customerFields = z.object({
+  name: z.string().trim().min(1).max(100),
+  phone: z.string().max(30).transform(normalizePhone).pipe(z.string().regex(/^974[3567]\d{7}$/)),
+  plate: z.string().transform(s => digits(s).trim().toUpperCase()).pipe(z.string().regex(/^[QTR]\d{3,6}$/)),
+  brand: z.enum(CAR_BRANDS.map(brand => brand.id)),
+  colour: optionalText(50), car: optionalText(80), instructions: optionalText(400),
+}).strict();
+/** Pickup UI does not collect email; strip a legacy key so an old tab still places. */
+export const customerSchema = z.preprocess((value) => {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return value;
+  if (!('email' in value)) return value;
+  const { email: _ignored, ...rest } = value as Record<string, unknown>;
+  return rest;
+}, customerFields);
+export type Customer = z.infer<typeof customerFields>;
+const option = z.string().min(1).max(100);
+export const selectionSchema = z.object({
+  protein: option.optional(), pieces: z.union([z.literal(4), z.literal(6), z.literal(8), z.literal(12), z.literal(24)]).optional(),
+  sauce: option.optional(), spicy: z.boolean().optional(), size: option.optional(), flavor: option.optional(),
+  starter: option.optional(), sushi: option.optional(), starters: z.array(option).max(20).optional(),
+  extras: z.array(option).max(100).refine(a => new Set(a).size === a.length).optional(),
+  picks: z.array(option).max(20).optional(), topping: option.optional(), style: option.optional(), cut: option.optional(), dip: option.optional(),
+}).strict();
+export const checkoutSchema = z.object({
+  branchId,
+  paymentMethod: z.enum(['mock', 'pay_at_pickup', 'sadad']).optional(),
+  couponCode: z.string().trim().min(1).max(32).optional(),
+  customer: customerSchema,
+  lines: z.array(z.object({ dishId: option, selection: selectionSchema, quantity: z.number().int().min(1).max(20), note: optionalText(400), expectedUnitMinor: z.number().int().min(0) }).strict()).min(1).max(100),
+}).strict();
+export type CheckoutInput = z.infer<typeof checkoutSchema>;
+export class CheckoutError extends Error {
+  constructor(public code: 'CLOSED' | 'UNAVAILABLE' | 'OPTIONS' | 'PRICE_CHANGED' | 'LIMIT' | 'CONFLICT' | 'NOT_FOUND' | 'EXPIRED' | 'NON_POSITIVE' | 'INVALID_CODE') { super(code); }
+}
+// The viewing menu tolerates legacy selections; checkout deliberately accepts only options belonging to this dish.
+export function validCheckoutSelection(dish: Dish, sel: Selection) {
+  if (!isSelectionComplete(dish, sel)) return false;
+  const allowed = new Set<string>();
+  const required: string[] = [];
+  const group = (key: string, exists: unknown) => { if (exists) { allowed.add(key); required.push(key); } };
+  if (dish.freeDips?.length) group('dip', true);
+  const k = dish.kind;
+  if ((k.type === 'addons' ? k.extras : dish.extras)?.length) allowed.add('extras');
+  switch (k.type) {
+    case 'roll': group('protein', true); group('pieces', true); group('topping', k.topping); group('style', k.style); break;
+    case 'spicy-toggle': allowed.add('spicy'); break; // Stored carts omit false: absence means mild.
+    case 'sauce-price': group('sauce', true); break;
+    case 'deal-box': group('starter', true); group('sushi', true); break;
+    case 'party-box': allowed.add('starters'); break;
+    case 'size-price': group('size', true); group('flavor', k.flavors); break;
+    case 'addons': if (k.spicyOptional) allowed.add('spicy'); if (k.includedPicks) allowed.add('picks'); k.freeChoices?.forEach(g => group(g.id, true)); break;
+  }
+  return Object.keys(sel).every(key => sel[key as keyof Selection] === undefined || allowed.has(key)) && required.every(key => sel[key as keyof Selection] !== undefined);
+}

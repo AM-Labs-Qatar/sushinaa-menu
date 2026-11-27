@@ -1,10 +1,10 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { dishSchema, type MenuData } from "../src/cms/schema";
+import { dishSchema, menuSchema } from "../src/cms/schema";
 import { imageFor, photoPosition, sheetImageFor } from "../src/ordering/price";
-const menu: MenuData = JSON.parse(
-  readFileSync("data/initial-menu.json", "utf8"),
+const menu = menuSchema.parse(
+  JSON.parse(readFileSync("data/initial-menu.json", "utf8")),
 );
 const burger = menu.dishes.find((d) => d.id === "sushinaa-burger")!;
 const roll = menu.dishes.find((d) => d.id === "mario-roll")!;

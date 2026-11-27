@@ -1,0 +1,121 @@
+// Live opening status for a branch, in Asia/Qatar time. Pure: callers pass the instant.
+import type { Lang } from "@/i18n/localize";
+import type { Session, WeekHours } from "./branches";
+
+export type QatarClock = { day: number; minute: number };
+
+export type BranchStatus = {
+  open: boolean;
+  /** Open, but closing within 30 minutes. */
+  soon: boolean;
+  /** "Open now", "Closes in 15 min", "Opens 1:30pm" or "Opens tomorrow". */
+  label: string;
+  /** The session the label is about, like "12pm – 2:30am". */
+  hours: string;
+  /** True when `hours` are tomorrow's. */
+  tomorrow: boolean;
+  dayLabel?: string;
+};
+
+const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+const SOON = 30;
+
+const qatar = new Intl.DateTimeFormat("en-GB", {
+  timeZone: "Asia/Qatar", weekday: "short", hour: "2-digit", minute: "2-digit", hourCycle: "h23",
+});
+
+export function qatarClock(at: Date): QatarClock {
+  const parts = qatar.formatToParts(at);
+  const get = (type: string) => parts.find((p) => p.type === type)?.value ?? "";
+  return { day: DAYS.indexOf(get("weekday")), minute: Number(get("hour")) * 60 + Number(get("minute")) };
+}
+
+export function formatMinute(minute: number, lang: Lang = "en"): string {
+  const m = ((minute % 1440) + 1440) % 1440;
+  const h24 = Math.floor(m / 60);
+  const mins = m % 60;
+  const h12 = h24 % 12 === 0 ? 12 : h24 % 12;
+  if (lang === "ar") {
+    const digits = (n: number) => new Intl.NumberFormat("ar-QA", { useGrouping: false }).format(n);
+    return `${digits(h12)}${mins ? `:${digits(mins).padStart(2, "٠")}` : ""} ${h24 < 12 ? "ص" : "م"}`;
+  }
+  return `${h12}${mins ? `:${String(mins).padStart(2, "0")}` : ""}${h24 < 12 ? "am" : "pm"}`;
+}
+
+export const RANGE_DASH = "\u2009\u2013\u2009";
+const range = (s: Session, lang: Lang) => `${formatMinute(s.open, lang)}${RANGE_DASH}${formatMinute(s.close, lang)}`;
+
+function openFor(session: Session, left: number, lang: Lang): BranchStatus {
+  const soon = left <= SOON;
+  const label = lang === "ar" ? (soon ? `يغلق خلال ${new Intl.NumberFormat("ar-QA").format(left)} دقيقة` : "مفتوح الآن")
+    : soon ? `Closes in ${left} min` : "Open now";
+  return { open: true, soon, label, hours: range(session, lang), tomorrow: false };
+}
+
+export function branchStatus(hours: WeekHours, { day, minute }: QatarClock, lang: Lang = "en"): BranchStatus {
+  const yesterday = hours[(day + 6) % 7];
+  const today = hours[day];
+  // Still inside last night's session, past midnight.
+  if (!yesterday.closed && yesterday.close > 1440 && minute < yesterday.close - 1440) {
+    return openFor(yesterday, yesterday.close - 1440 - minute, lang);
+  }
+  if (!today.closed && minute >= today.open && minute < today.close) return openFor(today, today.close - minute, lang);
+  if (!today.closed && minute < today.open) {
+    return { open: false, soon: false, label: lang === "ar" ? `يفتح ${formatMinute(today.open, lang)}` : `Opens ${formatMinute(today.open)}`, hours: range(today, lang), tomorrow: false };
+  }
+  for (let offset = 1; offset <= 7; offset++) {
+    const next = hours[(day + offset) % 7];
+    if (next.closed) continue;
+    const label = lang === 'ar' ? ['الأحد','الاثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'][(day+offset)%7]
+      : ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'][(day+offset)%7];
+    return {open:false,soon:false,label: offset===1 ? (lang==='ar'?'يفتح غدًا':'Opens tomorrow') : (lang==='ar'?`يفتح ${label}`:`Opens ${label}`), hours:range(next,lang),tomorrow:offset===1,...(offset>1?{dayLabel:label}:{})};
+  }
+  return {open:false,soon:false,label:lang==='ar'?'مغلق':'Closed',hours:lang==='ar'?'مغلق':'Closed',tomorrow:false};
+}
+
+/**
+ * Staff POS punch window: published hours expanded by ±graceMinutes on both sides.
+ * Customer checkout still uses `branchStatus(...).open` with no grace.
+ */
+export function staffOrderingOpen(
+  hours: WeekHours,
+  clock: QatarClock,
+  graceMinutes = 60,
+): boolean {
+  if (branchStatus(hours, clock).open) return true;
+  const { day, minute } = clock;
+  const yesterday = hours[(day + 6) % 7];
+  const today = hours[day];
+  if (!yesterday.closed) {
+    if (yesterday.close > 1440) {
+      const close = yesterday.close - 1440 + graceMinutes;
+      if (minute < close) return true;
+    } else {
+      // Same-calendar-day close (e.g. 23:30) whose grace spills past midnight.
+      const spill = yesterday.close + graceMinutes - 1440;
+      if (spill > 0 && minute < spill) return true;
+    }
+  }
+  if (!today.closed) {
+    const open = Math.max(0, today.open - graceMinutes);
+    const close = Math.min(2879, today.close + graceMinutes);
+    if (minute >= open && minute < close) return true;
+    // Early open grace before midnight on the previous calendar day:
+    if (today.open < graceMinutes && minute >= 1440 + today.open - graceMinutes) return true;
+  }
+  // Grace into tomorrow's early open after today's close.
+  const tomorrow = hours[(day + 1) % 7];
+  if (!tomorrow.closed && tomorrow.open <= graceMinutes) {
+    const wrap = 1440 + tomorrow.open - graceMinutes;
+    if (minute >= wrap) return true;
+  }
+  return false;
+}
+
+/** "Down Town, open now, today 12pm to 2:30am". */
+export function accessibleName(name: string, status: BranchStatus, lang: Lang = "en"): string {
+  if (lang === "ar") return `${name}، ${status.label}، ${status.dayLabel ?? (status.tomorrow ? "غدًا" : "اليوم")} ${status.hours.replace(RANGE_DASH, " إلى ")}`;
+  const label = status.label.charAt(0).toLowerCase() + status.label.slice(1);
+  const when = status.dayLabel ?? (status.tomorrow ? "tomorrow" : "today");
+  return `${name}, ${label}, ${when} ${status.hours.replace(RANGE_DASH, " to ")}`;
+}

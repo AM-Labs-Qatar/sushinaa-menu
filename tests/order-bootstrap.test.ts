@@ -1,0 +1,71 @@
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import { spawnSync } from 'node:child_process';
+import { readFileSync } from 'node:fs';
+import { ARRIVED_SQL, COUPONS_SQL, EDIT_SQL, ORDER_NUMBER_SQL, ORDER_SCHEMA, ORDER_SURFACE_SQL, OXIPOS_SQL, PRINT_SQL, STAFF_POS_SQL, STAFF_SCHEMA } from '../src/ordering/schema';
+
+import { LIVE_DATABASE_HOST } from '../src/lib/deploy-env';
+
+function run(code: string, env: Record<string, string>) {
+  const result = spawnSync(process.execPath, ['--import', 'tsx', '--eval', code], {
+    encoding: 'utf8', timeout: 15000,
+    env: { ...process.env, CMS_DATABASE_AUTH_TOKEN: '', CMS_PUBLIC_MENU_SOURCE_URL: '', CMS_ENV_GUARD: 'report', ...env },
+  });
+  assert.equal(result.status, 0, result.stderr || String(result.error));
+}
+test('importing the order route with VERCEL=1 does not throw', () => {
+  run("import('./src/app/api/orders/route.ts').then(() => console.log('imported'))", {
+    VERCEL: '1', VERCEL_ENV: 'preview', CMS_DATABASE_URL: 'libsql://placeholder.invalid',
+    ORDERING_PREVIEW_ENABLED: '',
+  });
+  run("import('./src/app/api/orders/route.ts').then(() => console.log('imported'))", {
+    VERCEL: '1', VERCEL_ENV: 'preview', CMS_DATABASE_URL: '',
+  });
+});
+test('ordering refuses to run or create tables on the live database host', () => {
+  // No connection is made: initOrders must reject before constructing the lazy client.
+  run(`(async () => {
+    const assert = (await import('node:assert/strict')).default;
+    globalThis.fetch = () => { throw new Error('network must not be touched'); };
+    const repository = (await import('./src/ordering/checkout/repository.ts')).default;
+    await assert.rejects(repository.initOrders(), /ORDERING_UNAVAILABLE/);
+    const route = (await import('./src/app/api/orders/route.ts')).default;
+    const orderUrl = 'http://order.localhost/api/orders';
+    for (const response of [
+      await route.GET(new Request(orderUrl)),
+      await route.POST(new Request(orderUrl, { method: 'POST' })),
+    ]) {
+      assert.equal(response.status, 503);
+      assert.deepEqual(await response.json(), {code:'ORDERING_UNAVAILABLE'});
+    }
+  })().catch(e => { console.error(e); process.exit(1); })`, {
+    VERCEL: '1', VERCEL_ENV: 'preview', NODE_ENV: 'development', ORDERING_PREVIEW_ENABLED: 'true',
+    CMS_DATABASE_URL: `libsql://${LIVE_DATABASE_HOST}`,
+  });
+});
+test('order bootstrap and additive migration have identical SQL', () => {
+  const statements = (file: string) => readFileSync(file, 'utf8').split(';').map(s => s.trim()).filter(Boolean);
+  assert.deepEqual(statements('db/migrations/0002_orders.sql'), ORDER_SCHEMA);
+  assert.deepEqual(statements('db/migrations/0003_order_number.sql'), ORDER_NUMBER_SQL);
+  assert.deepEqual(statements('db/migrations/0004_staff_access.sql'), STAFF_SCHEMA);
+  assert.deepEqual(statements('db/migrations/0005_order_printing.sql'), PRINT_SQL);
+  assert.equal(readFileSync('db/migrations/0006_order_edits.sql', 'utf8').trim(), `${EDIT_SQL.join(';\n')};`);
+  assert.deepEqual(statements('db/migrations/0008_customer_arrived.sql'), ARRIVED_SQL);
+  assert.deepEqual(statements('db/migrations/0009_coupons.sql'), COUPONS_SQL);
+  assert.deepEqual(statements('db/migrations/0010_oxipos.sql'), OXIPOS_SQL);
+  assert.deepEqual(statements('db/migrations/0011_order_surface.sql'), ORDER_SURFACE_SQL);
+  assert.equal(readFileSync('db/migrations/0012_staff_pos.sql', 'utf8').trim(), `${STAFF_POS_SQL.join(';\n')};`);
+});
+
+test('mock gateway cannot be enabled in production', () => {
+  run(`(async () => {
+    const assert = (await import('node:assert/strict')).default;
+    const guard = (await import('./src/cms/env-guard.ts')).default;
+    assert.throws(() => guard.assertPaymentProviderAllowed(), /Production must not use a mock/);
+    const route = (await import('./src/app/api/orders/[id]/mock-pay/route.ts')).default;
+    const response = await route.POST(new Request('http://localhost/api/orders/x/mock-pay', {method:'POST'}), {params:Promise.resolve({id:'x'})});
+    assert.equal(response.status,404);
+  })().catch(e => { console.error(e); process.exit(1); })`, {
+    VERCEL_ENV: 'production', PAYMENT_PROVIDER: 'mock', CMS_DATABASE_URL: 'file:/tmp/unused-mock-guard.db',
+  });
+});

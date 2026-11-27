@@ -1,3 +1,5 @@
+import { branchListSchema, defaultBranchSettings } from "@/branches/schema";
+import { saleIsLower } from "@/cms/sale-price";
 import { z } from "zod";
 const text = z.string().max(10000);
 const name = z.string().trim().min(1, "Name is required").max(200);
@@ -16,6 +18,7 @@ const price = z
     (n) => Math.abs(n * 100 - Math.round(n * 100)) < 0.00001,
     "Use at most two decimal places",
   );
+const sale = price.optional();
 const image = z
   .string()
   .max(500)
@@ -34,7 +37,37 @@ const choice = z
     veg: z.boolean().optional(),
   })
   .strict();
-const extra = z.object({ ...named, priceQar: price }).strict();
+/** Base price + optional sale. Sale must be strictly lower; customers pay the sale. */
+function priced<T extends z.ZodRawShape>(
+  shape: T,
+  pairs: readonly (readonly [string, string])[],
+) {
+  return z
+    .object(shape)
+    .strict()
+    .superRefine((value, ctx) => {
+      const row = value as Record<string, unknown>;
+      for (const [baseKey, saleKey] of pairs) {
+        const saleAmount = row[saleKey];
+        const base = row[baseKey];
+        if (saleAmount == null) continue;
+        if (
+          typeof saleAmount !== "number" ||
+          typeof base !== "number" ||
+          !saleIsLower(saleAmount, base)
+        ) {
+          ctx.addIssue({
+            code: "custom",
+            path: [saleKey],
+            message: "Sale price must be lower than the base price",
+          });
+        }
+      }
+    });
+}
+const extra = priced({ ...named, priceQar: price, saleQar: sale }, [
+  ["priceQar", "saleQar"],
+]);
 const unique = <T extends { id: string }>(a: T[]) =>
   new Set(a.map((x) => x.id)).size === a.length;
 const choices = z
@@ -59,8 +92,25 @@ const protein = z
     veg: z.boolean().optional(),
     seafood: z.boolean().optional(),
     prices,
+    saleQar: z
+      .record(z.string().regex(/^(4|6|8|12|24)$/), price)
+      .optional(),
   })
-  .strict();
+  .strict()
+  .superRefine((value, ctx) => {
+    const sales = value.saleQar;
+    if (!sales) return;
+    for (const [key, amount] of Object.entries(sales)) {
+      const base = value.prices[key as keyof typeof value.prices];
+      if (base == null || !saleIsLower(amount, base)) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["saleQar", key],
+          message: "Sale price must be lower than the base price",
+        });
+      }
+    }
+  });
 const count = z.number().int().min(0).max(20);
 const included = z
   .object({
@@ -72,31 +122,38 @@ const included = z
   })
   .strict()
   .refine((v) => v.min <= v.max, "Minimum cannot exceed maximum");
+const sauceEntry = priced(
+  {
+    ...named,
+    spicy: z.boolean().optional(),
+    priceQar: price,
+    saleQar: sale,
+  },
+  [["priceQar", "saleQar"]],
+);
 const kindSchema = z
   .discriminatedUnion("type", [
-    z.object({ type: z.literal("simple"), priceQar: price }).strict(),
-    z
-      .object({
+    priced(
+      { type: z.literal("simple"), priceQar: price, saleQar: sale },
+      [["priceQar", "saleQar"]],
+    ),
+    priced(
+      {
         type: z.literal("spicy-toggle"),
         mildQar: price,
         spicyQar: price,
-      })
-      .strict(),
+        mildSaleQar: sale,
+        spicySaleQar: sale,
+      },
+      [
+        ["mildQar", "mildSaleQar"],
+        ["spicyQar", "spicySaleQar"],
+      ],
+    ),
     z
       .object({
         type: z.literal("sauce-price"),
-        sauces: z
-          .array(
-            z
-              .object({
-                ...named,
-                spicy: z.boolean().optional(),
-                priceQar: price,
-              })
-              .strict(),
-          )
-          .min(1)
-          .refine(unique),
+        sauces: z.array(sauceEntry).min(1).refine(unique),
         freeDips: choices.optional(),
       })
       .strict(),
@@ -108,23 +165,27 @@ const kindSchema = z
         style: group.optional(),
       })
       .strict(),
-    z
-      .object({
+    priced(
+      {
         type: z.literal("deal-box"),
         priceQar: price,
+        saleQar: sale,
         starters: choices,
         sushi: choices,
-      })
-      .strict(),
-    z
-      .object({
+      },
+      [["priceQar", "saleQar"]],
+    ),
+    priced(
+      {
         type: z.literal("party-box"),
         priceQar: price,
+        saleQar: sale,
         starterMin: count,
         starterMax: count.min(1),
         starters: choices,
-      })
-      .strict(),
+      },
+      [["priceQar", "saleQar"]],
+    ),
     z
       .object({
         type: z.literal("size-price"),
@@ -132,10 +193,11 @@ const kindSchema = z
         flavors: group.optional(),
       })
       .strict(),
-    z
-      .object({
+    priced(
+      {
         type: z.literal("addons"),
         priceQar: price,
+        saleQar: sale,
         extras,
         spicyOptional: z.boolean().optional(),
         freeChoices: z
@@ -146,8 +208,9 @@ const kindSchema = z
           .refine(unique)
           .optional(),
         includedPicks: included.optional(),
-      })
-      .strict(),
+      },
+      [["priceQar", "saleQar"]],
+    ),
   ])
   .refine(
     (k) => k.type !== "party-box" || k.starterMin <= k.starterMax,
@@ -155,7 +218,76 @@ const kindSchema = z
   );
 // Where the tall card crop keeps its focus, as percentages of the photo.
 const percent = z.number().finite().min(0).max(100);
-export const dishSchema = z
+export const MENU_CHANNELS = ["menu", "pickup"] as const;
+export type MenuChannel = (typeof MENU_CHANNELS)[number];
+const dishChannelsSchema = z
+  .object({
+    menu: z.object({ visible: z.boolean() }).strict(),
+    pickup: z
+      .object({ visible: z.boolean(), available: z.boolean() })
+      .strict(),
+  })
+  .strict();
+
+/**
+ * Stable internal product code for POS mapping (OXiPOS `product_id`).
+ * Brand prefix + dish id: unique, readable, no spaces.
+ */
+export function defaultPosSku(dishId: string): string {
+  return `SU-${dishId.trim().toUpperCase()}`;
+}
+
+// Legacy top-level flags are not a second master. Channels win when present;
+// otherwise both storefronts are seeded from those flags so a stored menu stays populated.
+function normalizeDishChannels(dish: Record<string, unknown>) {
+  const legacyVisible =
+    typeof dish.visible === "boolean" ? dish.visible : true;
+  const legacyAvailable =
+    typeof dish.available === "boolean" ? dish.available : true;
+  const raw = dish.channels;
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
+    dish.channels = {
+      menu: { visible: legacyVisible },
+      pickup: { visible: legacyVisible, available: legacyAvailable },
+    };
+  } else {
+    const channels = raw as {
+      menu?: { visible?: unknown };
+      pickup?: { visible?: unknown; available?: unknown };
+    };
+    const menuVisible =
+      typeof channels.menu?.visible === "boolean"
+        ? channels.menu.visible
+        : legacyVisible;
+    const pickupVisible =
+      typeof channels.pickup?.visible === "boolean"
+        ? channels.pickup.visible
+        : legacyVisible;
+    const pickupAvailable =
+      typeof channels.pickup?.available === "boolean"
+        ? channels.pickup.available
+        : legacyAvailable;
+    dish.channels = {
+      menu: { visible: menuVisible },
+      pickup: { visible: pickupVisible, available: pickupAvailable },
+    };
+  }
+  delete dish.visible;
+  delete dish.available;
+  const id = typeof dish.id === "string" ? dish.id.trim() : "";
+  const sku = typeof dish.posSku === "string" ? dish.posSku.trim() : "";
+  if (sku) dish.posSku = sku;
+  else if (id) dish.posSku = defaultPosSku(id);
+  else delete dish.posSku;
+}
+
+function normalizeDishInput(raw: unknown): unknown {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return raw;
+  normalizeDishChannels(raw as Record<string, unknown>);
+  return raw;
+}
+
+const dishRecordSchema = z
   .object({
     ...named,
     nameAr: text,
@@ -176,11 +308,12 @@ export const dishSchema = z
     freeDips: choices.optional(),
     piecesNote: text.optional(),
     order: z.number().int().nonnegative(),
-    visible: z.boolean(),
-    available: z.boolean(),
+    channels: dishChannelsSchema,
+    posSku: z.string().trim().min(1).max(100).optional(),
     updatedAt: text.optional(),
   })
   .strict();
+export const dishSchema = z.preprocess(normalizeDishInput, dishRecordSchema);
 export const categorySchema = z
   .object({
     ...named,
@@ -344,6 +477,7 @@ export function normalizeStoredMenu(raw: unknown): unknown {
   const menu = raw as {
     copy?: Record<string, unknown>;
     settings?: Record<string, unknown>;
+    dishes?: unknown;
   };
   if (menu.copy && typeof menu.copy === "object") {
     for (const [lang, block] of Object.entries(menu.copy)) {
@@ -360,12 +494,19 @@ export function normalizeStoredMenu(raw: unknown): unknown {
     !Array.isArray(menu.settings.areasAr)
   )
     menu.settings.areasAr = SHIPPED_AREAS_AR;
+  if (Array.isArray(menu.dishes)) {
+    for (const entry of menu.dishes) {
+      if (entry && typeof entry === "object" && !Array.isArray(entry))
+        normalizeDishChannels(entry as Record<string, unknown>);
+    }
+  }
   return menu;
 }
 
-export const menuSchema = z
+const menuDocumentSchema = z
   .object({
     schemaVersion: z.literal(1),
+    branches: branchListSchema.default(defaultBranchSettings),
     categories: z
       .array(categorySchema)
       .max(100)
@@ -429,11 +570,22 @@ export const menuSchema = z
         message: "Keep the All filter enabled",
       });
   });
-export type MenuData = z.infer<typeof menuSchema>;
+/** Parses a stored or seed menu, migrating legacy dish flags into channels. */
+export const menuSchema = z.preprocess(
+  (raw) => normalizeStoredMenu(raw),
+  menuDocumentSchema,
+);
+export type MenuData = z.infer<typeof menuDocumentSchema>;
 export type CmsDish = z.infer<typeof dishSchema>;
 export type Category = z.infer<typeof categorySchema>;
 export type MenuSnapshot = { revision: number; menu: MenuData };
-export function publicMenu(m: MenuData): MenuData {
+
+/** Pickup channel: shown and orderable. Used by admin lists and dashboards. */
+export function dishPickupActive(d: CmsDish): boolean {
+  return d.channels.pickup.visible && d.channels.pickup.available;
+}
+
+export function publicMenu(m: MenuData, channel: MenuChannel): MenuData {
   const categories = m.categories
     .filter((c) => c.visible)
     .sort((a, b) => a.order - b.order);
@@ -442,7 +594,11 @@ export function publicMenu(m: MenuData): MenuData {
     categories,
     dishes: categories.flatMap((c) =>
       m.dishes
-        .filter((d) => d.section === c.id && d.visible && d.available)
+        .filter((d) => {
+          if (d.section !== c.id) return false;
+          if (channel === "menu") return d.channels.menu.visible;
+          return dishPickupActive(d);
+        })
         .sort((a, b) => a.order - b.order)
         // When an item was last edited is for the admin only.
         .map((d) => {

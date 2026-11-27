@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { proxy } from "../src/proxy";
+import { proxy, rewritePosTrailingSlash } from "../src/proxy";
 import { NextRequest } from "next/server";
 
 function request(host: string, path = "/down-town?x=1") {
@@ -42,4 +42,46 @@ test("admin host canonicalizes /admin URLs to the root paths", () => {
   const loc = new URL(login.headers.get("location")!);
   assert.equal(loc.pathname, "/login");
   assert.equal(loc.search, "?next=1");
+});
+
+test("POS trailing-slash paths rewrite without a redirect", () => {
+  assert.equal(
+    rewritePosTrailingSlash("/api/pos/orders/42/accepted/"),
+    "/api/pos/orders/42/accepted",
+  );
+  assert.equal(rewritePosTrailingSlash("/api/pos/orders/"), "/api/pos/orders");
+  assert.equal(rewritePosTrailingSlash("/api/pos/orders/42/accepted"), null);
+
+  const res = proxy(
+    request("menu.sushinaa.qa", "/api/pos/orders/42/accepted/?x=1"),
+  );
+  assert.equal(res.status, 200);
+  assert.equal(res.headers.get("location"), null);
+  assert.equal(
+    res.headers.get("x-middleware-rewrite"),
+    "https://example.invalid/api/pos/orders/42/accepted?x=1",
+  );
+});
+
+test("non-POS trailing slash redirects 308 to the no-slash path", () => {
+  const res = proxy(request("menu.sushinaa.qa", "/down-town/?x=1"));
+  assert.equal(res.status, 308);
+  const loc = new URL(res.headers.get("location")!);
+  assert.equal(loc.pathname, "/down-town");
+  assert.equal(loc.search, "?x=1");
+  assert.equal(res.headers.get("x-middleware-rewrite"), null);
+
+  const doubled = proxy(request("order.sushinaa.qa", "/down-town//"));
+  assert.equal(doubled.status, 308);
+  assert.equal(new URL(doubled.headers.get("location")!).pathname, "/down-town");
+});
+
+test("site root and the POS API are not trailing-slash redirected", () => {
+  const root = proxy(request("menu.sushinaa.qa", "/"));
+  assert.equal(root.status, 200);
+  assert.equal(root.headers.get("location"), null);
+
+  const posRoot = proxy(request("menu.sushinaa.qa", "/api/pos/"));
+  assert.equal(posRoot.status, 200);
+  assert.equal(posRoot.headers.get("location"), null);
 });
