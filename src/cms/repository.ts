@@ -12,6 +12,7 @@ import { menuLimitIssues } from "./limits";
 import { ZodError } from "zod";
 import { auditInsert, menuChanges, type AuditContext } from "./audit";
 import shipped from "./static-images.json";
+import { assertPublicMenuSourceUrl } from "./public-menu-source";
 const staticImages = new Set(shipped);
 export class ConflictError extends Error {}
 export class ContentError extends Error {}
@@ -52,6 +53,22 @@ function menuFromStored(raw: unknown): MenuData {
 
 export async function readMenu(): Promise<MenuSnapshot> {
   await initDb();
+  const source = process.env.CMS_PUBLIC_MENU_SOURCE_URL;
+  if (source) {
+    assertPublicMenuSourceUrl(source);
+    const response = await fetch(source, {
+      next: { revalidate: 60 },
+      signal: AbortSignal.timeout(8000),
+      redirect: 'error',
+    });
+    if (!response.ok) throw new Error('Published menu is temporarily unavailable.');
+    const raw = await response.json() as { revision?: unknown; menu?: unknown };
+    if (!Number.isInteger(raw.revision) || !raw.menu) throw new Error('Published menu response is invalid.');
+    return {
+      revision: Number(raw.revision),
+      menu: menuSchema.parse(normalizeStoredMenu(raw.menu)),
+    };
+  }
   const result = await db.execute(
     "SELECT revision,content FROM menu WHERE id=1",
   );
@@ -82,6 +99,7 @@ export async function saveMenu(
   revision: number,
   audit: AuditContext,
 ): Promise<MenuSnapshot> {
+  const includesBranches = Boolean(input && typeof input === "object" && "branches" in input);
   const menu = menuFromStored(input);
   await initDb();
   await validateImages(menu);
@@ -95,6 +113,7 @@ export async function saveMenu(
     ).rows[0];
     if (!row || Number(row.revision) !== revision) throw conflict();
     const stored = menuFromStored(JSON.parse(String(row.content)));
+    if (!includesBranches) menu.branches = stored.branches;
     // Only new or changed text has to fit; what is already saved stays valid.
     const over = menuLimitIssues(menu, stored);
     if (over.length) throw new ZodError(over);
@@ -113,7 +132,7 @@ export async function saveMenu(
   return { menu, revision: revision + 1 };
 }
 export async function seedMenu(input: unknown) {
-  const menu = menuSchema.parse(input);
+  const menu = menuSchema.parse(normalizeStoredMenu(input));
   await initDb();
   return db.execute({
     sql: "INSERT OR IGNORE INTO menu (id,revision,content) VALUES (1,1,?)",

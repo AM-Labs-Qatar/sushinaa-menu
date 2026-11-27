@@ -1,0 +1,185 @@
+import { createHash, randomUUID } from 'node:crypto';
+import { CheckoutError, type CheckoutInput } from './validation';
+import { couponCheckoutError, type OrderSnapshot } from './quote';
+import type { CustomerReceiptDetails } from '../contracts';
+import { claimCouponOn } from '@/ordering/coupons/repository';
+import { CouponError } from '@/ordering/coupons/types';
+import { db, initDb, databaseUrl } from '@/cms/db';
+import { assertOrderDatabaseAllowed } from '@/ordering/guard';
+import type { PaymentMethod } from '@/ordering/status';
+import { OrderError } from '@/ordering/http';
+import {
+  cancelOpenAttemptsStatement,
+  deriveCustomerPaymentStatus,
+  insertAwaitingAttemptStatement,
+} from '@/ordering/payment-attempt';
+import { releaseHeld } from '@/ordering/coupons/lifecycle';
+import { composeOrderNumber, ORDER_NUMBER_FLOOR, orderSequence, qatarDay } from '@/ordering/order-number';
+import {
+  ORDER_SURFACE_PICKUP,
+  type OrderSurface,
+} from '@/ordering/surface';
+export async function initOrders() {
+  assertOrderDatabaseAllowed(databaseUrl);
+  await initDb();
+}
+export const hash = (value: string) => createHash('sha256').update(value).digest('hex');
+export function checkoutRequestHash(body: CheckoutInput, method: PaymentMethod) {
+  return hash(JSON.stringify({ ...body, paymentMethod: method }));
+}
+export async function existingOrder(session: string, key: string, requestHash: string) {
+  await initOrders();
+  const row = (await db.execute({ sql: 'SELECT * FROM orders WHERE session_hash=? AND idempotency_key=?', args: [hash(session), key] })).rows[0];
+  if (!row) return null;
+  if (row.request_hash !== requestHash) throw new CheckoutError('CONFLICT');
+  return customerResult(row, true);
+}
+export function customerResult(row: Record<string, unknown>, reused = false) {
+  const updatedAt = typeof row.updated_at === 'string'
+    ? row.updated_at
+    : typeof row.created_at === 'string' ? String(row.created_at) : null;
+  return { id: String(row.id), orderNumber: row.order_number == null ? null : Number(row.order_number),
+    paymentStatus: deriveCustomerPaymentStatus({
+      paidAt: row.paid_at,
+      paymentMethod: String(row.payment_method),
+      createdAt: String(row.created_at),
+    }),
+    status: String(row.status), paymentMethod: row.payment_method as PaymentMethod, totalMinor: Number(row.total_minor), currency: 'QAR' as const,
+    arrivedAt: typeof row.customer_arrived_at === 'string' ? row.customer_arrived_at : null,
+    updatedAt, reused };
+}
+export async function markCustomerArrived(id: string, session: string | null, now = new Date()) {
+  await initOrders();
+  if (!session) throw new OrderError('NOT_FOUND', 404);
+  const row = (await db.execute({
+    sql: 'SELECT id,status,payment_method,paid_at,total_minor,created_at,updated_at,order_number,customer_arrived_at FROM orders WHERE id=? AND session_hash=?',
+    args: [id, hash(session)],
+  })).rows[0];
+  if (!row) throw new OrderError('NOT_FOUND', 404);
+  if (String(row.status) !== 'ready') throw new OrderError('INVALID', 409);
+  if (typeof row.customer_arrived_at === 'string') return customerResult(row);
+  const at = now.toISOString();
+  const updated = (await db.execute({
+    sql: "UPDATE orders SET customer_arrived_at=?, updated_at=? WHERE id=? AND session_hash=? AND status='ready' AND customer_arrived_at IS NULL RETURNING id,status,payment_method,paid_at,total_minor,created_at,updated_at,order_number,customer_arrived_at",
+    args: [at, at, id, hash(session)],
+  })).rows[0];
+  if (updated) return customerResult(updated);
+  const latest = (await db.execute({
+    sql: 'SELECT id,status,payment_method,paid_at,total_minor,created_at,updated_at,order_number,customer_arrived_at FROM orders WHERE id=? AND session_hash=?',
+    args: [id, hash(session)],
+  })).rows[0];
+  if (!latest || String(latest.status) !== 'ready') throw new OrderError('INVALID', 409);
+  return customerResult(latest);
+}
+export async function customerOrder(id: string, session: string | null) {
+  await initOrders();
+  if (!session) throw new OrderError('NOT_FOUND', 404);
+  const row = (await db.execute({ sql: 'SELECT id,status,payment_method,paid_at,total_minor,created_at,updated_at,order_number,branch_id,snapshot,customer_arrived_at FROM orders WHERE id=? AND session_hash=?', args: [id, hash(session)] })).rows[0];
+  if (!row) throw new OrderError('NOT_FOUND', 404);
+  const snapshot = JSON.parse(String(row.snapshot)) as Partial<OrderSnapshot>;
+  const { applyEdits, linesFromSnapshot } = await import('../edits');
+  const { storedEdits } = await import('../order-edits');
+  const projected = applyEdits(linesFromSnapshot(snapshot.lines ?? []), await storedEdits(id));
+  const lines: CustomerReceiptDetails['lines'] = projected.lines.filter(line => !line.voided).map(line => ({
+    id: line.id, dishId: line.dishId, name: line.name, nameAr: line.nameAr, quantity: line.quantity, note: line.note,
+    unitMinor: line.unitMinor, totalMinor: line.unitMinor * line.quantity, selection: line.selection,
+    kind: line.kind as CustomerReceiptDetails['lines'][number]['kind'],
+    freeDips: line.freeDips as CustomerReceiptDetails['lines'][number]['freeDips'],
+    extras: line.extras as CustomerReceiptDetails['lines'][number]['extras'],
+  }));
+  const discountMinor = Math.max(0, lines.reduce((sum, line) => sum + line.totalMinor, 0) - Number(row.total_minor));
+  const coupon = snapshot.coupon && typeof snapshot.coupon.code === 'string' && snapshot.coupon.code
+    && Number.isSafeInteger(snapshot.coupon.discountMinor) && snapshot.coupon.discountMinor > 0
+    ? { code: snapshot.coupon.code, discountMinor: snapshot.coupon.discountMinor }
+    : null;
+  const details: CustomerReceiptDetails = { branchId: row.branch_id as CustomerReceiptDetails['branchId'],
+    customer: snapshot.customer ?? null, lines, discountMinor, coupon,
+  };
+  const failedPaymentCount = Number((await db.execute({
+    sql: `SELECT COUNT(*) AS n FROM payment_events
+      WHERE order_id=? AND kind IN ('callback','webhook') AND our_status='failed'`,
+    args: [id],
+  })).rows[0]?.n ?? 0);
+  return { ...customerResult(row), details, failedPaymentCount };
+}
+export async function persistPendingOrder(
+  session: string,
+  key: string,
+  requestHash: string,
+  snapshot: OrderSnapshot,
+  revision: number,
+  method: PaymentMethod = 'mock',
+  surface: OrderSurface = ORDER_SURFACE_PICKUP,
+) {
+  await initOrders();
+  const acquire = async () => {
+    for (let n = 0; ; n++) {
+      try { return await db.transaction('write'); }
+      catch (error) {
+        if (n >= 20 || !(error instanceof Error) || !('code' in error) || error.code !== 'SQLITE_BUSY') throw error;
+        await new Promise(resolve => setTimeout(resolve, 20 * (n + 1)));
+      }
+    }
+  };
+  const tx = await acquire();
+  try {
+    const sessionHash = hash(session);
+    const previous = (await tx.execute({ sql: 'SELECT * FROM orders WHERE session_hash=? AND idempotency_key=?', args: [sessionHash, key] })).rows[0];
+    if (previous) {
+      if (previous.request_hash !== requestHash) throw new CheckoutError('CONFLICT');
+      await tx.commit();
+      return customerResult(previous, true);
+    }
+    const count = (await tx.execute({ sql: 'SELECT COUNT(*) AS count FROM orders WHERE session_hash=? AND created_at>?', args: [sessionHash, new Date(Date.now() - 3600000).toISOString()] })).rows[0];
+    if (Number(count.count) >= 10) throw new CheckoutError('LIMIT');
+    const id = `SU-${randomUUID()}`;
+    const now = new Date().toISOString();
+    // Customer edited the basket after Continue to payment: cancel the unpaid online
+    // row for this session so pay/begin cannot charge the stale total, and free any held coupon.
+    const stale = (await tx.execute({
+      sql: `SELECT id FROM orders WHERE session_hash=? AND paid_at IS NULL AND status='placed' AND payment_method IN ('sadad','mock')`,
+      args: [sessionHash],
+    })).rows;
+    if (stale.length) {
+      const purgeAfter = new Date(Date.parse(now) + 90 * 86400000).toISOString();
+      for (const row of stale) {
+        const staleId = String(row.id);
+        await tx.execute({
+          sql: `UPDATE orders SET status='cancelled', updated_at=?, purge_after=?
+            WHERE id=? AND paid_at IS NULL AND status='placed' AND payment_method IN ('sadad','mock')`,
+          args: [now, purgeAfter, staleId],
+        });
+        await tx.execute(cancelOpenAttemptsStatement(staleId, now));
+        await tx.execute({
+          sql: `UPDATE coupons SET ${releaseHeld.set} WHERE ${releaseHeld.from} AND held_order_id=?`,
+          args: [now, staleId],
+        });
+      }
+    }
+    const day = qatarDay(new Date(now));
+    const latest = (await tx.execute({
+      sql: 'SELECT order_number FROM orders WHERE branch_id=? AND created_at>=? AND created_at<? AND order_number>=? ORDER BY order_number DESC LIMIT 1',
+      args: [snapshot.branchId, day.start.toISOString(), day.end.toISOString(), ORDER_NUMBER_FLOOR],
+    })).rows[0];
+    const sequence = latest ? orderSequence(Number(latest.order_number)) + 1 : 1;
+    if (sequence > 999) throw new CheckoutError('LIMIT');
+    const orderNumber = composeOrderNumber(snapshot.branchId, day.month, day.day, sequence);
+    if (snapshot.coupon) {
+      try {
+        await claimCouponOn(tx, snapshot.coupon.code, id, new Date(now));
+      } catch (error) {
+        if (error instanceof CouponError) throw couponCheckoutError(error);
+        throw error;
+      }
+    }
+    await tx.batch([
+      { sql: 'INSERT INTO orders (id,session_hash,idempotency_key,request_hash,snapshot,branch_id,order_number,total_minor,currency,customer_name,customer_phone,car_plate,car_colour,car_model,instructions,created_at,updated_at,payment_method,order_surface) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
+        args: [id, sessionHash, key, requestHash, JSON.stringify({ version: 2, menuRevision: revision, ...snapshot }), snapshot.branchId, orderNumber, snapshot.totalMinor, snapshot.currency, snapshot.customer.name, snapshot.customer.phone, snapshot.customer.plate, snapshot.customer.colour, snapshot.customer.car, snapshot.customer.instructions, now, now, method, surface] },
+      ...(method === 'pay_at_pickup'
+        ? [{ sql: "INSERT INTO order_outbox (id,order_id,event,created_at) VALUES (?,?,'order.placed',?)", args: [randomUUID(), id, now] }]
+        : [insertAwaitingAttemptStatement(randomUUID(), id, method === 'sadad' ? 'sadad' : 'mock', now)]),
+    ]);
+    await tx.commit();
+    return customerResult({ id, status: 'placed', payment_method: method, total_minor: snapshot.totalMinor, created_at: now, order_number: orderNumber });
+  } finally { tx.close(); }
+}

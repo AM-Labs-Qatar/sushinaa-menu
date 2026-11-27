@@ -5,6 +5,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useLocale } from "@/i18n/locale";
 import { waLink } from "@/lib/site";
+import { Button } from "@/components/ui/Button";
 
 type Errors = Partial<Record<"name" | "phone" | "message", string>>;
 
@@ -89,9 +90,9 @@ export function ContactForm() {
         />
         {errors.message ? <span className="field-msg">{errors.message}</span> : null}
       </label>
-      <button type="submit" className="doc-cta" disabled={busy}>
+      <Button type="submit" size="doc" disabled={busy}>
         {busy ? t.openingWhatsApp : t.sendWhatsApp}
-      </button>
+      </Button>
     </form>
   );
 }

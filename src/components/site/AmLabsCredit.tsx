@@ -23,8 +23,10 @@ function useShowAmLabsCredit() {
   return useContext(ShowAmLabsCredit);
 }
 
-/** Studio credit — cart ticket only (not on the menu scroll). */
-export function AmLabsCredit({ placement }: { placement: "ticket" }) {
+type Placement = "branch" | "ticket";
+
+/** Studio credit — branch picker and cart ticket (not on the dish scroll). */
+export function AmLabsCredit({ placement }: { placement: Placement }) {
   if (!useShowAmLabsCredit()) return null;
   return (
     <a

@@ -15,7 +15,9 @@ const original = JSON.parse(
   readFileSync("tests/fixtures/original-menu.json", "utf8"),
 );
 const seed = menuSchema.parse(
-  JSON.parse(readFileSync("data/initial-menu.json", "utf8")),
+  normalizeStoredMenu(
+    JSON.parse(readFileSync("data/initial-menu.json", "utf8")),
+  ),
 );
 function contains(actual: unknown, expected: unknown, path = "menu") {
   if (Array.isArray(expected)) {
@@ -36,7 +38,11 @@ test("all 74 original dishes, nested options, prices, descriptions and images ar
     original.categories,
   );
   assert.deepEqual(
-    publicMenu(seed).dishes.map((d) => d.id),
+    publicMenu(seed, "pickup").dishes.map((d) => d.id),
+    original.dishes.map((d: { id: string }) => d.id),
+  );
+  assert.deepEqual(
+    publicMenu(seed, "menu").dishes.map((d) => d.id),
     original.dishes.map((d: { id: string }) => d.id),
   );
   const walk = (v: unknown) => {
@@ -50,10 +56,19 @@ test("all 74 original dishes, nested options, prices, descriptions and images ar
   walk(seed.dishes);
 });
 test("English and Arabic wording and interpolations preserve existing copy", () => {
-  assert.deepEqual(
-    seed.copy,
-    JSON.parse(readFileSync("tests/fixtures/original-copy.json", "utf8")),
-  );
+  const originalCopy = JSON.parse(readFileSync("tests/fixtures/original-copy.json", "utf8"));
+  const orderLabels = {
+    en: { addToOrder: "Add to cart", viewOrder: "View order", yourTicket: "Your order", closeTicket: "Close order" },
+    ar: { addToOrder: "أضف إلى السلة", viewOrder: "عرض الطلب", yourTicket: "طلبك", closeTicket: "إغلاق الطلب" },
+  };
+  for (const lang of ["en", "ar"] as const) {
+    assert.deepEqual(seed.copy[lang], { ...originalCopy[lang], ...orderLabels[lang] });
+    const upgraded = strings(lang, originalCopy);
+    for (const [key, value] of Object.entries(orderLabels[lang])) assert.equal(upgraded[key as keyof typeof upgraded], value);
+    const custom = structuredClone(originalCopy);
+    custom[lang].yourTicket = "Custom title";
+    assert.equal(strings(lang, custom).yourTicket, "Custom title");
+  }
   for (const lang of ["en", "ar"] as const) {
     const t = strings(lang, seed.copy);
     assert.ok(!t.openDetails("Dish").includes("{0}"));
@@ -147,14 +162,57 @@ test("validation rejects invalid money, relationships, empty choices, limits and
     m.dishes[0].image = "/dishes/../private";
   });
 });
+test("sale price must be lower than base and may omit keys", () => {
+  const ok = structuredClone(seed);
+  const simple = ok.dishes.find((d) => d.kind.type === "simple")!;
+  assert.equal(simple.kind.type, "simple");
+  simple.kind = { type: "simple", priceQar: 40, saleQar: 32 };
+  assert.equal(menuSchema.safeParse(ok).success, true);
+
+  const equal = structuredClone(seed);
+  const s = equal.dishes.find((d) => d.kind.type === "simple")!;
+  s.kind = { type: "simple", priceQar: 32, saleQar: 32 };
+  assert.equal(menuSchema.safeParse(equal).success, false);
+
+  const higher = structuredClone(seed);
+  const h = higher.dishes.find((d) => d.kind.type === "simple")!;
+  h.kind = { type: "simple", priceQar: 32, saleQar: 40 };
+  assert.equal(menuSchema.safeParse(higher).success, false);
+
+  const roll = structuredClone(seed);
+  const r = roll.dishes.find((d) => d.kind.type === "roll")!;
+  assert.equal(r.kind.type, "roll");
+  r.kind.proteins[0] = {
+    ...r.kind.proteins[0],
+    prices: { 6: 40, 12: 48 },
+    saleQar: { 6: 32 },
+  };
+  assert.equal(menuSchema.safeParse(roll).success, true);
+
+  const missingPortion = structuredClone(seed);
+  const mp = missingPortion.dishes.find((d) => d.kind.type === "roll")!;
+  assert.equal(mp.kind.type, "roll");
+  mp.kind.proteins[0] = {
+    ...mp.kind.proteins[0],
+    prices: { 6: 32 },
+    saleQar: { 12: 28 },
+  };
+  assert.equal(menuSchema.safeParse(missingPortion).success, false);
+
+  const unknown = structuredClone(seed);
+  const u = unknown.dishes.find((d) => d.kind.type === "simple")!;
+  (u.kind as { compareAt?: number }).compareAt = 40;
+  assert.equal(menuSchema.safeParse(unknown).success, false);
+});
 test("visibility, availability and explicit ordering determine the public menu", () => {
   const m = structuredClone(seed);
   m.categories[0].visible = false;
-  m.dishes[8].available = false;
-  m.dishes[9].visible = false;
-  const result = publicMenu(m);
+  m.dishes[8].channels.pickup.available = false;
+  m.dishes[9].channels.menu.visible = false;
+  m.dishes[9].channels.pickup.visible = false;
+  const pickup = publicMenu(m, "pickup");
   assert.ok(
-    !result.dishes.some(
+    !pickup.dishes.some(
       (d) =>
         d.section === m.categories[0].id ||
         d.id === m.dishes[8].id ||
@@ -163,7 +221,87 @@ test("visibility, availability and explicit ordering determine the public menu",
   );
   m.categories[0].visible = true;
   m.categories[0].order = 100;
-  assert.notEqual(publicMenu(m).categories[0].id, m.categories[0].id);
+  assert.notEqual(publicMenu(m, "menu").categories[0].id, m.categories[0].id);
+});
+test("channel publications filter menu and pickup independently", () => {
+  const m = structuredClone(seed);
+  const dish = m.dishes[0]!;
+  dish.channels = {
+    menu: { visible: true },
+    pickup: { visible: true, available: true },
+  };
+  assert.ok(publicMenu(m, "menu").dishes.some((d) => d.id === dish.id));
+  assert.ok(publicMenu(m, "pickup").dishes.some((d) => d.id === dish.id));
+
+  dish.channels = {
+    menu: { visible: true },
+    pickup: { visible: false, available: true },
+  };
+  assert.ok(publicMenu(m, "menu").dishes.some((d) => d.id === dish.id));
+  assert.ok(!publicMenu(m, "pickup").dishes.some((d) => d.id === dish.id));
+
+  dish.channels = {
+    menu: { visible: false },
+    pickup: { visible: true, available: true },
+  };
+  assert.ok(!publicMenu(m, "menu").dishes.some((d) => d.id === dish.id));
+  assert.ok(publicMenu(m, "pickup").dishes.some((d) => d.id === dish.id));
+
+  dish.channels = {
+    menu: { visible: false },
+    pickup: { visible: false, available: true },
+  };
+  assert.ok(!publicMenu(m, "menu").dishes.some((d) => d.id === dish.id));
+  assert.ok(!publicMenu(m, "pickup").dishes.some((d) => d.id === dish.id));
+
+  dish.channels = {
+    menu: { visible: true },
+    pickup: { visible: true, available: false },
+  };
+  assert.ok(publicMenu(m, "menu").dishes.some((d) => d.id === dish.id));
+  assert.ok(!publicMenu(m, "pickup").dishes.some((d) => d.id === dish.id));
+});
+test("normalizeStoredMenu migrates legacy visible/available into channels", () => {
+  const raw = {
+    schemaVersion: 1,
+    categories: [{ id: "c1", name: "C", order: 0, visible: true, featured: false }],
+    dishes: [
+      {
+        id: "d1",
+        name: "Dish",
+        nameAr: "صنف",
+        section: "c1",
+        description: "x",
+        image: "/dishes/x.jpg",
+        imageAlt: "x",
+        imageAltAr: "x",
+        tags: [],
+        kind: { type: "simple", priceQar: 1 },
+        order: 0,
+        visible: true,
+        available: false,
+      },
+    ],
+    settings: seed.settings,
+    copy: seed.copy,
+    fields: seed.fields,
+    filters: seed.filters,
+    branches: seed.branches,
+  };
+  const parsed = menuSchema.parse(structuredClone(raw));
+  const normalized = menuSchema.parse(normalizeStoredMenu(raw));
+  assert.deepEqual(parsed.dishes[0]!.channels, {
+    menu: { visible: true },
+    pickup: { visible: true, available: false },
+  });
+  assert.equal("visible" in parsed.dishes[0]!, false);
+  assert.equal("available" in parsed.dishes[0]!, false);
+  assert.deepEqual(normalized.dishes[0]!.channels, {
+    menu: { visible: true },
+    pickup: { visible: true, available: false },
+  });
+  assert.equal("visible" in normalized.dishes[0]!, false);
+  assert.equal("available" in normalized.dishes[0]!, false);
 });
 test("deleted option IDs in saved carts are rejected", () => {
   const d = seed.dishes.find((d) => d.kind.type === "deal-box")!;

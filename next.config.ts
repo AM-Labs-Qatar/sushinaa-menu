@@ -1,26 +1,39 @@
 import type { NextConfig } from "next";
+import { isProductionDeployment } from "./src/lib/deploy-env";
 
 const isDev = process.env.NODE_ENV !== "production";
+// Explicitly allow HTTP for a built local phone preview. Hosted deployments
+// always retain HTTPS enforcement, even if this local flag is set by mistake.
+const localHttpPreview = process.env.SUSHINAA_LOCAL_HTTP_PREVIEW === "1"
+  && !process.env.VERCEL && !process.env.VERCEL_ENV;
 
 const csp = [
   "default-src 'self'",
   `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ""} https://va.vercel-scripts.com`,
   "style-src 'self' 'unsafe-inline'",
-  "img-src 'self' data: blob:",
+  "img-src 'self' data: blob: https://tiles.openfreemap.org",
   "font-src 'self'",
   "connect-src 'self' https://vitals.vercel-insights.com https://va.vercel-scripts.com https://*.vercel-insights.com",
-  "frame-ancestors 'none'",
+  "frame-ancestors 'self' https://abuiqbal.com https://*.abuiqbal.com http://localhost:3000 http://127.0.0.1:3000",
   "base-uri 'self'",
-  "form-action 'self'",
+  // Hosted Sadad WebCheckout posts here, then redirects to payment.sadadqa.com for 3DS.
+  // Some browsers also apply form-action to that redirect chain.
+  "form-action 'self' https://sadadqa.com https://payment.sadadqa.com",
   // Safari upgrades http://localhost assets to https when this is set, so the
   // dev menu loses its stylesheet and photos. Production stays on HTTPS.
-  ...(isDev ? [] : ["upgrade-insecure-requests"]),
+  ...(isDev || localHttpPreview ? [] : ["upgrade-insecure-requests"]),
 ].join("; ");
 
 const securityHeaders = [
-  { key: "Strict-Transport-Security", value: "max-age=63072000; includeSubDomains; preload" },
+  ...(isProductionDeployment()
+    ? []
+    : [{ key: "X-Robots-Tag", value: "noindex, nofollow" }]),
+  // Never HSTS on local HTTP — Safari caches it and then upgrades CSS/JS to
+  // https://localhost, which fails and leaves the admin unstyled.
+  ...(!isDev && !localHttpPreview
+    ? [{ key: "Strict-Transport-Security", value: "max-age=63072000; includeSubDomains; preload" }]
+    : []),
   { key: "X-Content-Type-Options", value: "nosniff" },
-  { key: "X-Frame-Options", value: "DENY" },
   { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
   {
     key: "Permissions-Policy",
@@ -31,6 +44,9 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
+  // Next 308s a trailing slash before proxy runs. That drops an OXiPOS POST body.
+  // Proxy rewrites /api/pos and 308s every other slashed path.
+  skipTrailingSlashRedirect: true,
   devIndicators: false,
   // Opt in to the exact LAN address used for local phone previews.
   allowedDevOrigins: process.env.SUSHINAA_PREVIEW_HOST
@@ -41,7 +57,11 @@ const nextConfig: NextConfig = {
     unoptimized: true,
   },
   compiler: {
-    removeConsole: process.env.NODE_ENV === "production",
+    // Keep warn/error so structured payment logs (channel: payment) reach Vercel.
+    // Still strip console.log / debug / table noise from production bundles.
+    removeConsole: process.env.NODE_ENV === "production"
+      ? { exclude: ["error", "warn"] }
+      : false,
   },
   // Vercel runs linux-x64 glibc, so that libsql and sharp pair stays in the
   // trace. The other native builds, and sharp's wasm builds, do not.
@@ -82,6 +102,14 @@ const nextConfig: NextConfig = {
       {
         source: "/brand/:path*",
         headers: [{ key: "Cache-Control", value: "public, max-age=31536000, immutable" }],
+      },
+      {
+        source: "/branch/:path*",
+        headers: [{ key: "Cache-Control", value: "public, max-age=31536000, immutable" }],
+      },
+      {
+        source: "/cms/orders/:id/ticket",
+        headers: [{ key: "Cache-Control", value: "no-store" }],
       },
     ];
   },

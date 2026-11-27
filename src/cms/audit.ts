@@ -1,4 +1,4 @@
-import type { InStatement } from "@libsql/client";
+import type { SqlStatement } from "./sql";
 import type { MenuData } from "./schema";
 
 // Append-only activity log. Rows are only ever inserted, in the same
@@ -31,7 +31,7 @@ export function auditContext(request: Request, actor: string | null): AuditConte
   };
 }
 
-export function auditInsert(ctx: AuditContext, entry: AuditEntry): InStatement {
+export function auditInsert(ctx: AuditContext, entry: AuditEntry): SqlStatement {
   return {
     sql: "INSERT INTO audit (at,actor,action,entity_type,entity_id,label,diff,ip,user_agent) VALUES (?,?,?,?,?,?,?,?,?)",
     args: [
@@ -76,8 +76,21 @@ function entityChanges<T extends { id: string; name?: string }>(
     const diff = fieldDiff(prev, e, ignore);
     const keys = Object.keys(diff);
     if (!keys.length) continue;
-    const action = keys.length === 1 && keys[0] === "visible" ? (e as { visible?: boolean }).visible ? "show" : "hide"
-      : keys.length === 1 && keys[0] === "order" ? "reorder" : "update";
+    let action = "update";
+    if (keys.length === 1 && keys[0] === "visible") {
+      action = (e as { visible?: boolean }).visible ? "show" : "hide";
+    } else if (keys.length === 1 && keys[0] === "order") {
+      action = "reorder";
+    } else if (keys.length === 1 && keys[0] === "channels") {
+      const change = diff.channels as {
+        from?: { menu?: { visible?: boolean }; pickup?: { visible?: boolean } };
+        to?: { menu?: { visible?: boolean }; pickup?: { visible?: boolean } };
+      };
+      const shown = (ch?: { menu?: { visible?: boolean }; pickup?: { visible?: boolean } }) =>
+        Boolean(ch?.menu?.visible || ch?.pickup?.visible);
+      if (shown(change.from) !== shown(change.to))
+        action = shown(change.to) ? "show" : "hide";
+    }
     out.push({ action: `${type}.${action}`, entityType: type, entityId: e.id, label, diff });
   }
   for (const e of before)
@@ -92,6 +105,7 @@ export function menuChanges(before: MenuData, after: MenuData): AuditEntry[] {
     // The editor stamps updatedAt on every save; it is not a change in itself.
     ...entityChanges("item", before.dishes, after.dishes, ["updatedAt"]),
     ...entityChanges("filter", before.filters, after.filters),
+    ...entityChanges("branch", before.branches.map(b=>({...b,id:b.slug})), after.branches.map(b=>({...b,id:b.slug}))),
   ];
   const prefixed = (lang: "en" | "ar") => Object.fromEntries(
     Object.entries(fieldDiff(before.copy[lang], after.copy[lang])).map(([k, v]) => [`${lang}.${k}`, v]),

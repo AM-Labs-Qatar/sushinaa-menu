@@ -15,7 +15,10 @@ test("a save is described as one row per changed entity", () => {
   const [a, b, c, d] = after.dishes;
   a.description = "New words";
   a.updatedAt = "2026-10-08T00:00:00.000Z";
-  b.visible = false;
+  b.channels = {
+    menu: { visible: false },
+    pickup: { visible: false, available: b.channels.pickup.available },
+  };
   [c.order, d.order] = [d.order, c.order];
   after.dishes.push({ ...structuredClone(a), id: "fresh", name: "Fresh" });
   after.dishes = after.dishes.filter((x) => x.id !== after.dishes[4].id);

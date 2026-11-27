@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import type { MenuData, CmsDish, Category } from "@/cms/schema";
+import { dishPickupActive } from "@/cms/schema";
 import { minPriceOf } from "@/ordering/price";
 import { MoveButtons, moveEntry } from "./Fields";
 export function MenuList({
@@ -52,7 +53,9 @@ export function MenuList({
       .join(" ")
       .toLowerCase()
       .includes(needle) &&
-    (!show || (show === "active") === (d.visible && d.available && c.visible));
+    (!show ||
+      (show === "active") ===
+        (dishPickupActive(d) && c.visible));
   const filtering = Boolean(needle || show);
   const groups = categories
     .filter(
@@ -147,16 +150,20 @@ export function MenuList({
                 <span
                   className={
                     "admin-pill" +
-                    (d.visible && d.available && c.visible ? "" : " off")
+                    (dishPickupActive(d) && c.visible ? "" : " off")
                   }
                 >
-                  {!d.visible
+                  {!d.channels.menu.visible && !d.channels.pickup.visible
                     ? "Hidden"
-                    : !d.available
-                      ? "Unavailable"
-                      : !c.visible
-                        ? "Category hidden"
-                        : "Active"}
+                    : !d.channels.pickup.visible
+                      ? "Menu only"
+                      : !d.channels.pickup.available
+                        ? "Unavailable"
+                        : !d.channels.menu.visible
+                          ? "Pickup only"
+                          : !c.visible
+                            ? "Category hidden"
+                            : "Active"}
                 </span>
                 <div className="admin-actions">
                   <MoveButtons
@@ -186,19 +193,30 @@ export function MenuList({
                     onClick={() =>
                       onChange({
                         ...menu,
-                        dishes: menu.dishes.map((x) =>
-                          x.id === d.id
-                            ? {
-                                ...x,
-                                visible: !x.visible,
-                                updatedAt: new Date().toISOString(),
-                              }
-                            : x,
-                        ),
+                        dishes: menu.dishes.map((x) => {
+                          if (x.id !== d.id) return x;
+                          const next = !(
+                            x.channels.menu.visible ||
+                            x.channels.pickup.visible
+                          );
+                          return {
+                            ...x,
+                            channels: {
+                              menu: { visible: next },
+                              pickup: {
+                                ...x.channels.pickup,
+                                visible: next,
+                              },
+                            },
+                            updatedAt: new Date().toISOString(),
+                          };
+                        }),
                       })
                     }
                   >
-                    {d.visible ? "Hide" : "Show"}
+                    {d.channels.menu.visible || d.channels.pickup.visible
+                      ? "Hide"
+                      : "Show"}
                   </button>
                   <button
                     className="danger"

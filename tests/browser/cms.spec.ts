@@ -18,8 +18,8 @@ test("authenticated CMS CRUD, persistence, uploads and public integration", asyn
   await page.getByLabel("Username").fill(admin.username);
   await page.getByLabel("Password", { exact: true }).fill(`wrong-${Date.now()}`);
   await page.getByRole("button", { name: "Sign in", exact: true }).click();
-  // Next also renders an empty role="alert" route announcer; match the sign-in error only.
-  await expect(page.getByRole("alert").filter({ hasText: "Invalid" })).toBeVisible();
+  // The CMS uses Sonner for sign-in errors. Match the visible message itself.
+  await expect(page.getByText("Invalid username or password", { exact: true })).toBeVisible();
   await page.getByLabel("Password", { exact: true }).fill(admin.password);
   await page.getByRole("button", { name: "Sign in", exact: true }).click();
   await expect(
@@ -150,7 +150,7 @@ test("authenticated CMS CRUD, persistence, uploads and public integration", asyn
     await publish();
     pub = await (await request.get("/api/menu")).json();
     expect(pub.menu.categories[0].id).toBe(cat.id);
-    await page.goto("/");
+    await page.goto("/down-town");
     const categoryMenu = page.getByRole("button", { name: /^Category:/ });
     await categoryMenu.click();
     const categories = page.getByRole("dialog", { name: "Menu" });
@@ -166,22 +166,29 @@ test("authenticated CMS CRUD, persistence, uploads and public integration", asyn
     await expect(page.getByRole("dialog")).toContainText("19.50");
     await expect(page.getByRole("dialog")).toContainText("Extra");
     const current = snapshot.menu.dishes.find((d) => d.id === dish.id)!;
-    current.visible = false;
+    current.channels = {
+      menu: { visible: false },
+      pickup: { ...current.channels.pickup, visible: false },
+    };
     await publish();
     expect(
       (await (await request.get("/api/menu")).json()).menu.dishes.some(
         (d: { id: string }) => d.id === dish.id,
       ),
     ).toBe(false);
-    snapshot.menu.dishes.find((d) => d.id === dish.id)!.visible = true;
-    snapshot.menu.dishes.find((d) => d.id === dish.id)!.available = false;
+    const restored = snapshot.menu.dishes.find((d) => d.id === dish.id)!;
+    restored.channels = {
+      menu: { visible: true },
+      pickup: { visible: true, available: false },
+    };
     await publish();
+    // Menu channel still shows unavailable-for-pickup dishes.
     expect(
       (await (await request.get("/api/menu")).json()).menu.dishes.some(
         (d: { id: string }) => d.id === dish.id,
       ),
-    ).toBe(false);
-    snapshot.menu.dishes.find((d) => d.id === dish.id)!.available = true;
+    ).toBe(true);
+    restored.channels.pickup.available = true;
     snapshot.menu.categories.find((c) => c.id === cat.id)!.visible = false;
     await publish();
     expect(
@@ -223,12 +230,12 @@ test("public menu works at mobile and desktop widths in both languages", async (
   await page.addInitScript(() => localStorage.clear());
   for (const width of [390, 1440]) {
     await page.setViewportSize({ width, height: 844 });
-    await page.goto("/");
+    await page.goto("/down-town");
     await expect(page.locator(".chrome-header")).toBeVisible();
     await expect(page.locator("#dish-sushinaa-burger")).toBeVisible();
     await page.locator("#dish-sushinaa-burger .slide-hit").click();
     await expect(page.getByRole("dialog")).toContainText("Sushinaa burger");
-    await page.getByRole("button", { name: /Save item ·/ }).click();
+    await page.getByRole("button", { name: /Add to cart ·/ }).click();
     await expect(page.locator(".sticky-cta")).toContainText("53");
     await page.locator(".sticky-cta").click();
     await expect(page.getByRole("dialog")).toContainText("Sushinaa burger");
@@ -349,7 +356,7 @@ test("admin controls edit, reorder and delete content and options", async ({
       .poll(
         async () =>
           (await saved()).menu.dishes.find((d) => d.id === "sushinaa-burger")
-            ?.visible,
+            ?.channels.menu.visible,
       )
       .toBe(false);
     await burger.getByRole("button", { name: "Show", exact: true }).click();
@@ -357,7 +364,7 @@ test("admin controls edit, reorder and delete content and options", async ({
       .poll(
         async () =>
           (await saved()).menu.dishes.find((d) => d.id === "sushinaa-burger")
-            ?.visible,
+            ?.channels.menu.visible,
       )
       .toBe(true);
     await page.getByRole("button", { name: "Settings", exact: true }).click();
@@ -372,7 +379,7 @@ test("admin controls edit, reorder and delete content and options", async ({
     await expect
       .poll(async () => (await saved()).menu.copy.en.addToOrder)
       .toBe("Add this dish");
-    await page.goto("/");
+    await page.goto("/down-town");
     await expect(page.locator("#dish-sushinaa-burger .slide-cta")).toHaveText(
       "Add this dish",
     );
@@ -396,7 +403,7 @@ test("admin controls edit, reorder and delete content and options", async ({
         await page.request.put("/api/admin/menu", { headers, data: empty })
       ).status(),
     ).toBe(200);
-    await page.goto("/");
+    await page.goto("/down-town");
     await expect(
       page.getByText("No dishes match these filters."),
     ).toBeVisible();
@@ -626,9 +633,8 @@ test("card focal point and options photo round-trip to the public menu", async (
     expect(burger.imageFocus).toEqual({ x: 60, y: 51 });
     expect(burger.optionsImage).toMatch(/^\/api\/media\//);
     expect(burger.image).toBe("/dishes/portrait/sushinaa-burger.webp");
-    // main serves the public menu at `/` (no per-branch storefront routes here).
     // Portrait slides force centered contain; saved focal point applies to non-portrait cards.
-    await page.goto("/");
+    await page.goto("/down-town");
     const card = page.locator("#dish-sushinaa-burger img.dish-photo");
     await expect(card).toHaveCSS("object-position", "50% 50%");
     await page.locator("#dish-sushinaa-burger .slide-hit").click();
@@ -655,7 +661,7 @@ test("the options photo opens full screen and closes back to the sheet", async (
   page,
 }) => {
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.goto("/");
+  await page.goto("/down-town");
   await page.locator("#dish-sushinaa-burger .slide-hit").click();
   const photo = page.locator(".detail-photo-open");
   await photo.click();
@@ -683,7 +689,7 @@ test("search opens from its button toward the logo and closes back to it", async
   page,
 }) => {
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.goto("/");
+  await page.goto("/down-town");
   const toggle = page.locator(".chrome-actions .search-toggle");
   // The menu streams in behind the loading screen; measure once it is shown.
   await expect(toggle).toBeVisible();
@@ -700,7 +706,7 @@ test("search opens from its button toward the logo and closes back to it", async
   await expect(toggle).toHaveAttribute("aria-label", "Clear search");
   const input = page.locator("#menu-search");
   await expect(input).toBeFocused();
-  const logo = page.locator(".brand-navigation > .wordmark-img");
+  const logo = page.locator(".chrome-header .brand-mark .wordmark-img");
   const logoBox = (await logo.boundingBox())!;
   const field = (await page.locator(".header-search-field").boundingBox())!;
   expect(field.x).toBeLessThanOrEqual(logoBox.x + 1);
@@ -780,7 +786,7 @@ test("search is closed from the first frame and its first open starts on the nex
   };
   for (const lang of ["en", "ar"]) {
     await page.context().addCookies([{ name: "sushina-lang", value: lang, url: baseURL! }]);
-    await page.goto("/");
+    await page.goto("/down-town");
     await expect(toggle).toHaveAttribute("aria-expanded", "false");
     // Wait for the init-script probe to catch the field's first laid-out frame
     // (CI can hydrate past the fixed 800ms window after a Next bump).
@@ -805,7 +811,7 @@ test("search is closed from the first frame and its first open starts on the nex
 
 test("the header category menu follows the feed", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.goto("/");
+  await page.goto("/down-town");
   const menuButton = page.getByRole("button", { name: /^Category:/ });
   await expect(menuButton).toHaveAccessibleName("Category: New");
   await expect(menuButton).toHaveAttribute("aria-expanded", "false");
@@ -871,7 +877,13 @@ test("every admin write leaves an activity row and failed writes leave none", as
   // Accepted writes.
   const next = structuredClone(snapshot);
   next.menu.dishes[0].description = "Audited change";
-  next.menu.dishes[1].visible = false;
+  next.menu.dishes[1].channels = {
+    menu: { visible: false },
+    pickup: {
+      visible: false,
+      available: next.menu.dishes[1].channels.pickup.available,
+    },
+  };
   next.menu.settings.tagline = "Audited tagline";
   const saved = await api.put("/api/admin/menu", { headers, data: next });
   expect(saved.status()).toBe(200);
@@ -890,7 +902,7 @@ test("every admin write leaves an activity row and failed writes leave none", as
   await expect(page.getByText(`Changed item “${original.dishes[0].name}”: description`).first()).toBeVisible();
   await page.getByLabel("Show activity for").selectOption("settings");
   await expect(page.getByText("Changed settings: tagline").first()).toBeVisible();
-  await expect(page.locator(".admin-activity li").first()).toContainText("Changed settings: tagline");
+  await expect(page.locator(".admin-activity tr").first()).toContainText("Changed settings: tagline");
   await page.getByRole("button", { name: "Sign out", exact: true }).click();
   await expect(page).toHaveURL(/\/admin\/login/);
   await api.post("/api/admin/session", { headers, data: admin });
@@ -1017,7 +1029,7 @@ test("the longest allowed text and 4-digit prices keep the card and sheet intact
     await page.setViewportSize({ width: 360, height: 740 });
     await page.addInitScript(() => localStorage.clear());
     for (const lang of ["en", "ar"]) {
-      await page.goto("/");
+      await page.goto("/down-town");
       if (lang === "ar")
         await page.getByRole("button", { name: "Switch to Arabic" }).click();
       const card = page.locator("#dish-sushinaa-burger");

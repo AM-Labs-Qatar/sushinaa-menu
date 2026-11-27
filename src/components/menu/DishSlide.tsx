@@ -7,9 +7,11 @@ import { useLocale } from "@/i18n/locale";
 import { dishDescription, pickName, sectionName as categoryName, type Lang } from "@/i18n/localize";
 import { formatQar as money } from "@/lib/money";
 import { useMenu } from "@/cms/context";
-import { hasPriceRange, imageFor, photoPosition, selectionForDiet, unitPrice } from "@/ordering/price";
+import { hasPriceRange, imageFor, photoPosition, selectionForDiet, shownPrice } from "@/ordering/price";
 import type { Copy } from "@/i18n/copy";
 import { DietTags } from "./DietTags";
+import { PriceShown, priceSpoken } from "./PriceShown";
+import { buttonClass, type ButtonVariant } from "@/components/ui/Button";
 
 type Props = {
   dish: Dish;
@@ -17,8 +19,8 @@ type Props = {
   active?: boolean;
   eager?: boolean;
   marked?: boolean;
-  showHint?: boolean;
   inert?: boolean;
+  cta?: ButtonVariant;
   onOpen: (dish: Dish) => void;
 };
 
@@ -28,8 +30,8 @@ export const DishSlide = memo(function DishSlide({
   active = false,
   eager = false,
   marked = false,
-  showHint = false,
   inert = false,
+  cta = "primary",
   onOpen,
 }: Props) {
   const { lang, t } = useLocale();
@@ -39,7 +41,7 @@ export const DishSlide = memo(function DishSlide({
   const featured = menu.categories.find((c) => c.id === dish.section)?.featured;
   const sel = selectionForDiet(dish, diet);
   const from = hasPriceRange(dish);
-  const price = unitPrice(dish, sel);
+  const price = shownPrice(dish, sel);
   const photo = imageFor(dish, sel);
   const title = pickName(dish, lang);
   const description = dishDescription(dish, lang);
@@ -47,6 +49,12 @@ export const DishSlide = memo(function DishSlide({
   const patterned = photo.startsWith("/brand/");
   const showPhoto = eager || patterned;
   const hint = hintFor(dish, sel, t);
+  const spoken = priceSpoken(
+    price,
+    lang,
+    (n) => formatQar(n, lang),
+    from ? t.from : undefined,
+  );
 
   return (
     <article
@@ -54,7 +62,7 @@ export const DishSlide = memo(function DishSlide({
       id={marked ? `dish-${dish.id}` : undefined}
       data-section={dish.section}
       inert={inert}
-      aria-label={`${title}, ${from ? `${t.from} ` : ""}${formatQar(price, lang)}. ${t.tapForDetails}`}
+      aria-label={`${title}, ${spoken}. ${t.tapForDetails}`}
     >
       <button
         type="button"
@@ -75,8 +83,8 @@ export const DishSlide = memo(function DishSlide({
             fill
             sizes="(max-width: 430px) 100vw, 430px"
             preload={active}
-            loading={active ? undefined : "eager"}
-            fetchPriority={active ? undefined : "high"}
+            loading="eager"
+            fetchPriority={active ? "high" : "low"}
             unoptimized
             draggable={false}
             className="dish-photo"
@@ -86,13 +94,6 @@ export const DishSlide = memo(function DishSlide({
           <div className="dish-photo-ph" aria-hidden="true" />
         )}
         <div className="scrim" />
-
-        {showHint ? (
-          <p className="swipe-hint" aria-hidden="true">
-            {t.swipeUp}
-            <span className="swipe-chevron">⌃</span>
-          </p>
-        ) : null}
 
         <div className="slide-copy">
           <p
@@ -105,14 +106,13 @@ export const DishSlide = memo(function DishSlide({
           <div className="title-row">
             <h2 className="dish-name">{title}</h2>
             <p className="dish-price">
-              {from ? <span className="from">{t.from} </span> : null}
-              {formatQar(price, lang)}
+              <PriceShown price={price} from={from ? t.from : undefined} />
             </p>
           </div>
           <DietTags tags={dish.tags} />
           <p className="dish-desc dish-desc-feed">{description}</p>
           {hint ? <p className="tap-hint">{hint}</p> : null}
-          <span className="slide-cta">{t.addToOrder}</span>
+          <span className={buttonClass(cta, "slide", "slide-cta")}>{t.addToOrder}</span>
         </div>
       </button>
     </article>
