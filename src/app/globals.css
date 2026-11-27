@@ -1484,50 +1484,6 @@ button {
   padding: 0;
 }
 
-/* Studio credit (see showAmLabsCredit). */
-.am-labs-credit {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 10px;
-  letter-spacing: 0.06em;
-  text-decoration: none;
-  pointer-events: auto;
-}
-.am-labs-credit-mark {
-  flex: 0 0 auto;
-  width: 14px;
-  height: 14px;
-  display: block;
-}
-.am-labs-credit--ticket {
-  justify-self: center;
-  color: #9a8570;
-}
-.am-labs-credit--ticket:hover,
-.am-labs-credit--ticket:focus-visible {
-  color: #6a5640;
-}
-.am-labs-credit--ticket:focus-visible {
-  outline: 1px solid rgba(106, 86, 64, 0.45);
-  outline-offset: 3px;
-}
-.ticket-foot {
-  display: grid;
-  grid-template-columns: 1fr auto 1fr;
-  align-items: center;
-  margin-top: 4px;
-  min-height: 36px;
-}
-.ticket-foot .am-labs-credit--ticket {
-  grid-column: 2;
-}
-.ticket-foot .clear-ticket {
-  grid-column: 3;
-  justify-self: end;
-  margin: 0;
-}
-
 @media (prefers-reduced-motion: reduce) {
   .ticket,
   .detail-sheet {
@@ -2057,18 +2013,4 @@ button {
     color-mix(in srgb, var(--color-ink) 88%, transparent) 0%, color-mix(in srgb, var(--color-ink) 18%, transparent) 16%,
     transparent 36%, color-mix(in srgb, var(--color-ink) 20%, transparent) 55%,
     color-mix(in srgb, var(--color-ink) 85%, transparent) 78%, var(--color-ink) 100%);
-}
-
-/* Approved portrait photography retains the whole composition on any screen. */
-.slide-portrait { background: #ded8d2; }
-.slide.slide-portrait .dish-photo {
-  object-fit: contain;
-  object-position: center !important;
-  transform: none;
-}
-.slide-portrait .scrim {
-  background: linear-gradient(to bottom,
-    rgba(20,17,15,.88) 0%, rgba(20,17,15,.18) 16%,
-    transparent 36%, rgba(20,17,15,.2) 55%,
-    rgba(20,17,15,.85) 78%, #14110f 100%);
 }
