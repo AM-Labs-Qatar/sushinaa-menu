@@ -626,9 +626,11 @@ test("card focal point and options photo round-trip to the public menu", async (
     expect(burger.imageFocus).toEqual({ x: 60, y: 51 });
     expect(burger.optionsImage).toMatch(/^\/api\/media\//);
     expect(burger.image).toBe("/dishes/portrait/sushinaa-burger.webp");
-    await page.goto("/down-town");
+    // main serves the public menu at `/` (no per-branch storefront routes here).
+    // Portrait slides force centered contain; saved focal point applies to non-portrait cards.
+    await page.goto("/");
     const card = page.locator("#dish-sushinaa-burger img.dish-photo");
-    await expect(card).toHaveCSS("object-position", "60% 51%");
+    await expect(card).toHaveCSS("object-position", "50% 50%");
     await page.locator("#dish-sushinaa-burger .slide-hit").click();
     await expect(page.locator(".detail-photo")).toHaveAttribute(
       "src",
